@@ -87,22 +87,45 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1000, thresh_refl=0.15, thre
     list_bbox_bar = [x.bbox for x in regions if (x.solidity < 0.9 and x.area >= area_range)
                      or (x.solidity > 0.9 and x.area > 12000)]
     list_bar = []
+    # With the bbox of groups of grains, the image is retrieved for each one, then labeled and region properties are
+    # determined. The aim is to separate grain but to retrieve only useful pixels, not overlapping areas.
     for ind in range(len(list_bbox_bar)):
         im_bar = imr[list_bbox_bar[ind][0]:list_bbox_bar[ind][2],
                      list_bbox_bar[ind][1] + colmin:list_bbox_bar[ind][3] + colmin]  # Select the image inside the bbox
         ret_bar, binary_image_bar = cv.threshold(im_bar, thresh_refl + 0.1, 1, cv.THRESH_BINARY)  # Higher threshold
+        # binary_image_bar = cv.morphologyEx(binary_image_bar, cv.MORPH_CLOSE, np.ones((4, 4), np.uint8))
         labeled_array_bar = label(binary_image_bar)
         regions_bar = regionprops(labeled_array_bar)
-        list_bbox_bar_res = np.array([x.bbox for x in regions_bar if x.area >= area_range + 3500 and x.solidity > 0.9])
-        for i in range(len(list_bbox_bar_res)):
-            list_bbox_bar_res[i][0] = list_bbox_bar_res[i][0] + list_bbox_bar[ind][0]
-            list_bbox_bar_res[i][1] = list_bbox_bar_res[i][1] + list_bbox_bar[ind][1]
-            list_bbox_bar_res[i][2] = list_bbox_bar_res[i][2] + list_bbox_bar[ind][0]
-            list_bbox_bar_res[i][3] = list_bbox_bar_res[i][3] + list_bbox_bar[ind][1]
-        list_bar = [*list_bar, *list_bbox_bar_res]
-    # print(list_bbox_bar_res)
-    # plt.imshow(labeled_array_bar)
-    # plt.show()
+        list_regions_bar = np.array([x for x in regions_bar if x.area >= area_range and x.solidity > 0.9])  # + 3500
+        array_bbox_bar_res = np.array([x.bbox for x in list_regions_bar])
+        for idx, x in enumerate(list_regions_bar):
+            # show_image(x.convex_image)  # filled_image, convex_image
+            # print(x.coords)
+            # show_image(im_bar)
+            img_tmp = im_bar[array_bbox_bar_res[idx][0]:array_bbox_bar_res[idx][2],
+                             array_bbox_bar_res[idx][1]:array_bbox_bar_res[idx][3]]
+            # show_image(img_tmp)
+            # print(x.convex_image.astype(np.uint8))
+            mask = x.convex_image.astype(np.uint8)
+            # mask = np.zeros(img_tmp.shape, dtype=np.uint8)
+            # for coord in x.coords:
+            #     x, y = coord
+            #     x -= array_bbox_bar_res[idx][0]
+            #     y -= array_bbox_bar_res[idx][1]
+            #     mask[x][y] = 1
+            result = cv.bitwise_and(img_tmp, img_tmp, mask=mask)
+            show_image(result)
+        exit()
+
+        # The bbox coordinates must be set for the global image, not locally
+        for i in range(len(array_bbox_bar_res)):
+            array_bbox_bar_res[i][0] = array_bbox_bar_res[i][0] + list_bbox_bar[ind][0]
+            array_bbox_bar_res[i][1] = array_bbox_bar_res[i][1] + list_bbox_bar[ind][1]
+            array_bbox_bar_res[i][2] = array_bbox_bar_res[i][2] + list_bbox_bar[ind][0]
+            array_bbox_bar_res[i][3] = array_bbox_bar_res[i][3] + list_bbox_bar[ind][1]
+        list_bar = [*list_bar, *array_bbox_bar_res]
+
+    # print(array_bbox_bar_res)
 
     # list_bbox = list_size
     # list_bbox = list_bar
@@ -127,6 +150,10 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1000, thresh_refl=0.15, thre
         plt.show()
 
     return array_bbox
+
+
+def remove_white_area(array_bbox):
+    return 0
 
 
 PATH = "D:/Etude technique/"
