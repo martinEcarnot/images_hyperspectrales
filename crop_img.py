@@ -6,6 +6,7 @@ import spectral.io.bipfile as bf
 import numpy as np
 from preprocessing import preprocessing
 from tqdm import tqdm
+import os
 
 PATH = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/'
 file = 'var8-x75y12_7000_us_2x_2021-10-20T113607_corr'
@@ -44,6 +45,9 @@ def crop_image(path_in, path_out, filename, ext, band_step=1, apply_mask=False):
                 new_img[x1:x2, y1:y2, j] = cv2.bitwise_and(grain_img, grain_img, mask=masks[j * band_step])
             else:
                 new_img[x1:x2, y1:y2, j] = grain_img[:, :, j * band_step]
+
+        if not os.path.exists(path_out):
+            os.makedirs(path_out)
 
         file_name = path_out + 'grain' + str(k) + '.hdr'
         envi.save_image(file_name, new_img, force=True)
