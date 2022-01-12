@@ -27,9 +27,9 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1000, thresh_refl=0.15, thre
     :param thresh_refl: threshold of reflectance to remove background
     :param thresh_lum_spectralon: threshold of light intensity to remove background + milli
     :param band: spectral band to extract (#100 : 681 nm)
-    :param area_range: range of grain area in number of pixels
+    :param area_range: minimum area to be considered, in pixels
     :param verbose: display the image with bbox
-    :return: array of bbox of all grains
+    :return: array of bbox of all grains, list of masks for all grains
     """
     img = envi.open(folder_path + s_img + '.hdr', folder_path + s_img + '.hyspex')
     img = np.array(img.read_band(band), dtype=np.int16)
@@ -68,20 +68,15 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1000, thresh_refl=0.15, thre
     # binary_image = cv.morphologyEx(binary_image, cv.MORPH_CLOSE, np.ones((10, 10), np.uint8))
 
     labeled_array = label(binary_image)
-    # show_image(labeled_array)
     regions = regionprops(labeled_array)
 
     list_bbox = [x.bbox for x in regions if 12000 >= x.area >= area_range and x.solidity > 0.9]
+    # the max area find was around 11000. Two grains close can have a solidity > 0.9 so a upper bound must be set.
 
-    # Check if two grains have been considered as one (the area is considered for comparison)
-    # list_area = []
-    # list_size = []
-    # for x in regions:
-    #     if x.area >= area_range and x.solidity > 0.9:
-    #         list_area.append(x.area)
-    #         if x.area > 11000:
-    #             list_size.append(x.bbox)
-    # print(sorted(list_area, reverse=True))
+    # In addition to bbox, the mask is retrieved
+    list_mask = [x.convex_image.astype(np.uint8) for x in regions if 12000 >= x.area >= area_range and x.solidity > 0.9]
+
+    # create_lists_areas(regions, area_range)  # Display the list of area sizes in pixels
 
     # Case if solidity and size (upper bound) conditions are not met
     list_bbox_bar = [x.bbox for x in regions if (x.solidity < 0.9 and x.area >= area_range)
@@ -93,29 +88,17 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1000, thresh_refl=0.15, thre
         im_bar = imr[list_bbox_bar[ind][0]:list_bbox_bar[ind][2],
                      list_bbox_bar[ind][1] + colmin:list_bbox_bar[ind][3] + colmin]  # Select the image inside the bbox
         ret_bar, binary_image_bar = cv.threshold(im_bar, thresh_refl + 0.1, 1, cv.THRESH_BINARY)  # Higher threshold
-        # binary_image_bar = cv.morphologyEx(binary_image_bar, cv.MORPH_CLOSE, np.ones((4, 4), np.uint8))
         labeled_array_bar = label(binary_image_bar)
         regions_bar = regionprops(labeled_array_bar)
-        list_regions_bar = np.array([x for x in regions_bar if x.area >= area_range and x.solidity > 0.9])  # + 3500
+        # + 3000 to remove partial grains (bbox can include sliced grains)
+        list_regions_bar = np.array([x for x in regions_bar if x.area >= area_range + 3000 and x.solidity > 0.9])
         array_bbox_bar_res = np.array([x.bbox for x in list_regions_bar])
-        for idx, x in enumerate(list_regions_bar):
-            # show_image(x.convex_image)  # filled_image, convex_image
-            # print(x.coords)
-            # show_image(im_bar)
-            img_tmp = im_bar[array_bbox_bar_res[idx][0]:array_bbox_bar_res[idx][2],
-                             array_bbox_bar_res[idx][1]:array_bbox_bar_res[idx][3]]
-            # show_image(img_tmp)
-            # print(x.convex_image.astype(np.uint8))
+
+        # Creation of the mask for each grain by using the convex_image
+        # list_mask.append(create_mask(im_bar, array_bbox_bar_res, list_regions_bar))  # First solution
+        for x in list_regions_bar:
             mask = x.convex_image.astype(np.uint8)
-            # mask = np.zeros(img_tmp.shape, dtype=np.uint8)
-            # for coord in x.coords:
-            #     x, y = coord
-            #     x -= array_bbox_bar_res[idx][0]
-            #     y -= array_bbox_bar_res[idx][1]
-            #     mask[x][y] = 1
-            result = cv.bitwise_and(img_tmp, img_tmp, mask=mask)
-            #show_image(result)
-        #exit()
+            list_mask.append(mask)
 
         # The bbox coordinates must be set for the global image, not locally
         for i in range(len(array_bbox_bar_res)):
@@ -123,13 +106,10 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1000, thresh_refl=0.15, thre
             array_bbox_bar_res[i][1] = array_bbox_bar_res[i][1] + list_bbox_bar[ind][1]
             array_bbox_bar_res[i][2] = array_bbox_bar_res[i][2] + list_bbox_bar[ind][0]
             array_bbox_bar_res[i][3] = array_bbox_bar_res[i][3] + list_bbox_bar[ind][1]
-        list_bar = [*list_bar, *array_bbox_bar_res]
+        list_bar = [*list_bar, *array_bbox_bar_res]  # Full list with all bbox
 
-    # print(array_bbox_bar_res)
-
-    # list_bbox = list_size
-    # list_bbox = list_bar
-    list_bbox = [*list_bbox, *list_bar]
+    list_bbox = list_bar
+    # list_bbox = [*list_bbox, *list_bar]
     array_bbox = np.array(list_bbox)
 
     # Add colmin to y values
@@ -137,6 +117,7 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1000, thresh_refl=0.15, thre
         array_bbox[i][1] = array_bbox[i][1] + colmin
         array_bbox[i][3] = array_bbox[i][3] + colmin
 
+    # Display
     if verbose:
         fig, ax = plt.subplots()
         ax.xaxis.tick_top()
@@ -149,19 +130,60 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1000, thresh_refl=0.15, thre
         plt.imshow(result, cmap="gray")
         plt.show()
 
-    return array_bbox
+    return array_bbox, list_mask
 
 
-def remove_white_area(array_bbox):
-    return 0
+def create_lists_areas(regions, area_range):
+    """
+    Display the sorted list of all areas given the condition x.area >= area_range and x.solidity > 0.9.
+    Moreover, check if two grains have been considered as one by printing areas > 11000 pixels
+
+    :param regions: Measured properties of labeled image regions
+    :param area_range: minimum area to be considered, in pixels
+    """
+    list_area = []
+    list_size = []
+    for x in regions:
+        if x.area >= area_range and x.solidity > 0.9:
+            list_area.append(x.area)
+            if x.area > 11000:
+                list_size.append(x.bbox)
+    print(sorted(list_area, reverse=True))
+    print("List of area > 11000 pixels: ", list_size)
+
+
+def create_mask(im_bar, array_bbox_bar_res, list_regions_bar):
+    """
+    Compute a mask to retrieve only the grain of an image
+
+    :param im_bar: image delimited by the bbox
+    :param array_bbox_bar_res: array of bbox
+    :param list_regions_bar: List of measured properties of labeled image regions
+    :return: a list of binary masks
+    """
+    list_mask = []
+    for idx, x in enumerate(list_regions_bar):
+        img_tmp = im_bar[array_bbox_bar_res[idx][0]:array_bbox_bar_res[idx][2],
+                         array_bbox_bar_res[idx][1]:array_bbox_bar_res[idx][3]]
+        show_image(img_tmp)
+        mask = np.zeros(img_tmp.shape, dtype=np.uint8)
+        for coord in x.coords:
+            x, y = coord
+            x -= array_bbox_bar_res[idx][0]
+            y -= array_bbox_bar_res[idx][1]
+            mask[x][y] = 1
+        result = cv.bitwise_and(img_tmp, img_tmp, mask=mask)
+        show_image(result)
+        list_mask.append(mask)
+    return list_mask
 
 
 PATH = "D:/Etude technique/"
-PATH = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/'
+# PATH = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/'
 sImg = "var8-x75y12_7000_us_2x_2021-10-20T113607_corr"
 
-print('hello')
-array_bbox_ = preprocessing(PATH, sImg)
-print(array_bbox_)
+array_bbox_, masks = preprocessing(PATH, sImg)
+# print(array_bbox_)
 print(array_bbox_.shape)
+print(len(masks))
 
