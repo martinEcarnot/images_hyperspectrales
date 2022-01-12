@@ -108,8 +108,8 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1000, thresh_refl=0.15, thre
             array_bbox_bar_res[i][3] = array_bbox_bar_res[i][3] + list_bbox_bar[ind][1]
         list_bar = [*list_bar, *array_bbox_bar_res]  # Full list with all bbox
 
-    list_bbox = list_bar
-    # list_bbox = [*list_bbox, *list_bar]
+    # list_bbox = list_bar
+    list_bbox = [*list_bbox, *list_bar]
     array_bbox = np.array(list_bbox)
 
     # Add colmin to y values
