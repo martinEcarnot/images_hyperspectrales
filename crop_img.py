@@ -12,15 +12,13 @@ PATH_OUT = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/img/'
 file = 'var8-x75y12_7000_us_2x_2021-10-20T113607_corr'
 ext = '.hdr' #'.hyspex'
 
-
-array_bbox_ = preprocessing(PATH, file)
-
-def crop_image(path, filename, arr_box, band_step = 1, apply_mask = False):
+def crop_image(path, filename, band_step = 1, apply_mask = False):
+    arr_bbox, masks_ = preprocessing(path, filename)
     all_heights = []
     all_widths = []
-    for k in range(0, len(arr_box), band_step):
-        width = array_bbox_[k][3] - array_bbox_[k][1]
-        height = array_bbox_[k][2] - array_bbox_[k][0]
+    for k in range(0, len(arr_bbox), band_step):
+        width = arr_bbox[k][3] - arr_bbox[k][1]
+        height = arr_bbox[k][2] - arr_bbox[k][0]
         all_widths.append(width)
         all_heights.append(height)
 
@@ -28,19 +26,22 @@ def crop_image(path, filename, arr_box, band_step = 1, apply_mask = False):
     max_width = max(all_widths)
 
     img = sp.open_image(PATH + file + ext)
-    for k in tqdm(range(0, len(arr_box), band_step)):
+    for k in tqdm(range(0, len(arr_bbox), band_step)):
 
-        box = arr_box[k]
+        box = arr_bbox[k]
         grain_img = img[box[1]:box[3], box[0]:box[2]]
         w, h = grain_img.shape[0], grain_img.shape[1]
 
         x1, y1 = (max_width - w) // 2, (max_height - h) // 2
         x2, y2 = x1 + w, y1 + h
 
-        new_img = np.zeros((max_width, max_height, 216))
-        new_img[x1:x2, y1:y2, :] = grain_img
+        n_bands = 216 // band_step
+        new_img = np.zeros((max_width, max_height, n_bands))
 
-        file_name = PATH_OUT + 'grain' + str(k) + '.hdr'
+        for j in range(n_bands):
+            new_img[x1:x2, y1:y2, j] = grain_img
+
+        file_name = path + 'grain' + str(k) + '.hdr'
         envi.save_image(file_name, new_img, force = True)
 
 '''
