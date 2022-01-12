@@ -13,7 +13,7 @@ file = 'var8-x75y12_7000_us_2x_2021-10-20T113607_corr'
 ext = '.hdr' #'.hyspex'
 
 def crop_image(path, filename, band_step = 1, apply_mask = False):
-    arr_bbox, masks_ = preprocessing(path, filename)
+    arr_bbox, masks = preprocessing(path, filename)
     all_heights = []
     all_widths = []
     for k in range(0, len(arr_bbox), band_step):
@@ -38,8 +38,11 @@ def crop_image(path, filename, band_step = 1, apply_mask = False):
         n_bands = 216 // band_step
         new_img = np.zeros((max_width, max_height, n_bands))
 
-        for j in range(n_bands):
-            new_img[x1:x2, y1:y2, j] = grain_img
+        if apply_mask:
+            for j in range(0, 216, band_step):
+                new_img[x1:x2, y1:y2, j] = cv2.bitwise_and(grain_img, grain_img, mask = masks[j])
+        else:
+            new_img[x1:x2, y1:y2, :] = grain_img
 
         file_name = path + 'grain' + str(k) + '.hdr'
         envi.save_image(file_name, new_img, force = True)
