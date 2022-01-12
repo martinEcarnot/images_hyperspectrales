@@ -2,21 +2,19 @@ import cv2
 import matplotlib.pyplot as plt
 import spectral as sp
 import spectral.io.envi as envi
-import spectral.io.bipfile as bf
+# import spectral.io.bipfile as bf
 import numpy as np
 from preprocessing import preprocessing
 from tqdm import tqdm
 import os
 
-PATH = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/'
-file = 'var8-x75y12_7000_us_2x_2021-10-20T113607_corr'
-PATH_OUT = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/' + file + '/'
-ext = '.hdr'  # '.hyspex'
 
-
-def crop_image(path_in, path_out, filename, ext, band_step=1, apply_mask=False):
+def crop_image(path_in, path_out, filename, ext, band_step=1, apply_mask=False, force_creation=False):
+    bool_file = 0
     if not os.path.exists(path_out):
         os.makedirs(path_out)
+        bool_file = 1
+    if bool_file or force_creation:
         arr_bbox, masks = preprocessing(path_in, filename)
         all_heights = []
         all_widths = []
@@ -52,6 +50,11 @@ def crop_image(path_in, path_out, filename, ext, band_step=1, apply_mask=False):
             envi.save_image(file_name, new_img, force=True)
 
 
+# PATH = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/'
+PATH = "D:/Etude technique/"
+file = 'var8-x75y12_7000_us_2x_2021-10-20T113607_corr'
+PATH_OUT = PATH + file + '/'
+ext = '.hdr'  # '.hyspex'
 crop_image(PATH, PATH_OUT, file, ext, band_step=20)
 
 file = 'grain0'
