@@ -13,7 +13,7 @@ PATH_OUT = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/' + file + '/'
 ext = '.hdr'  # '.hyspex'
 
 
-def crop_image(path_in, path_out, filename, band_step=1, apply_mask=False):
+def crop_image(path_in, path_out, filename, ext, band_step=1, apply_mask=False):
     arr_bbox, masks = preprocessing(path_in, filename)
     all_heights = []
     all_widths = []
@@ -26,7 +26,7 @@ def crop_image(path_in, path_out, filename, band_step=1, apply_mask=False):
     max_height = max(all_heights)
     max_width = max(all_widths)
 
-    img = sp.open_image(PATH + file + ext)
+    img = sp.open_image(path_in + filename + ext)
     for k in tqdm(range(0, len(arr_bbox), band_step)):
 
         box = arr_bbox[k]
@@ -49,7 +49,7 @@ def crop_image(path_in, path_out, filename, band_step=1, apply_mask=False):
         envi.save_image(file_name, new_img, force=True)
 
 
-crop_image(PATH, PATH_OUT, file, band_step=20)
+crop_image(PATH, PATH_OUT, file, ext, band_step=20)
 
 file = 'grain0'
 img = sp.open_image(PATH_OUT + file + ext)
