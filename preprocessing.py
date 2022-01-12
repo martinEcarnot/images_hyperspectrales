@@ -157,8 +157,10 @@ def remove_white_area(array_bbox):
 
 
 PATH = "D:/Etude technique/"
+PATH = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/'
 sImg = "var8-x75y12_7000_us_2x_2021-10-20T113607_corr"
 
 array_bbox_ = preprocessing(PATH, sImg)
-# print(array_bbox_)
+print(array_bbox_)
 print(array_bbox_.shape)
+print('hello')
