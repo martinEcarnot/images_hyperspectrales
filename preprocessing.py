@@ -114,8 +114,8 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1000, thresh_refl=0.15, thre
             #     y -= array_bbox_bar_res[idx][1]
             #     mask[x][y] = 1
             result = cv.bitwise_and(img_tmp, img_tmp, mask=mask)
-            show_image(result)
-        exit()
+            #show_image(result)
+        #exit()
 
         # The bbox coordinates must be set for the global image, not locally
         for i in range(len(array_bbox_bar_res)):
@@ -160,7 +160,8 @@ PATH = "D:/Etude technique/"
 PATH = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/'
 sImg = "var8-x75y12_7000_us_2x_2021-10-20T113607_corr"
 
+print('hello')
 array_bbox_ = preprocessing(PATH, sImg)
 print(array_bbox_)
 print(array_bbox_.shape)
-print('hello')
+

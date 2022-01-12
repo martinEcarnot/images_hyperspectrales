@@ -4,7 +4,7 @@ import spectral as sp
 import spectral.io.envi as envi
 import spectral.io.bipfile as bf
 import numpy as np
-#from preprocessing import preprocessing
+from preprocessing import preprocessing
 
 PATH = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/'
 PATH_OUT = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/img/'
@@ -15,11 +15,17 @@ array_bbox_ = [[2000, 200, 2500, 310],
                [2000, 200, 2250, 550],
                [2000, 1000, 2250, 1250]]
 
+array_bbox_ = preprocessing(PATH, file)
+print(array_bbox_[0])
+print(array_bbox_[1])
+print(array_bbox_[2])
+#exit()
+
 all_heights = []
 all_widths = []
 for k in range(len(array_bbox_)):
-    width = array_bbox_[k][2] - array_bbox_[k][0]
-    height = array_bbox_[k][3] - array_bbox_[k][1]
+    width = array_bbox_[k][3] - array_bbox_[k][1]
+    height = array_bbox_[k][2] - array_bbox_[k][0]
     all_widths.append(width)
     all_heights.append(height)
 
@@ -35,7 +41,7 @@ img = sp.open_image(PATH + file + ext)
 print(img.shape)
 c = 0
 for box in array_bbox_:
-    grain_img = img[box[0]:box[2], box[1]:box[3]]
+    grain_img = img[box[1]:box[3], box[0]:box[2]]
     print(grain_img.shape)
     w, h = grain_img.shape[0], grain_img.shape[1]
     print('w', w)
