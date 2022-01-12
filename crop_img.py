@@ -18,7 +18,7 @@ def crop_image(path_in, path_out, filename, ext, band_step=1, apply_mask=False, 
         arr_bbox, masks = preprocessing(path_in, filename)
         all_heights = []
         all_widths = []
-        for k in range(0, len(arr_bbox), band_step):
+        for k in range(len(arr_bbox)):
             width = arr_bbox[k][3] - arr_bbox[k][1]
             height = arr_bbox[k][2] - arr_bbox[k][0]
             all_widths.append(width)
@@ -28,7 +28,7 @@ def crop_image(path_in, path_out, filename, ext, band_step=1, apply_mask=False, 
         max_width = max(all_widths)
 
         img = sp.open_image(path_in + filename + ext)
-        for k in tqdm(range(0, len(arr_bbox), band_step)):
+        for k in tqdm(range(len(arr_bbox))):
 
             box = arr_bbox[k]
             grain_img = img[box[1]:box[3], box[0]:box[2]]
@@ -50,8 +50,8 @@ def crop_image(path_in, path_out, filename, ext, band_step=1, apply_mask=False, 
             envi.save_image(file_name, new_img, force=True)
 
 
-# PATH = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/'
-PATH = "D:/Etude technique/"
+PATH = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/'
+#PATH = "D:/Etude technique/"
 file = 'var8-x75y12_7000_us_2x_2021-10-20T113607_corr'
 PATH_OUT = PATH + file + '/'
 ext = '.hdr'  # '.hyspex'
