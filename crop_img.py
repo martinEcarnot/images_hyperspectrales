@@ -8,12 +8,12 @@ from preprocessing import preprocessing
 from tqdm import tqdm
 
 PATH = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/'
-PATH_OUT = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/img/'
 file = 'var8-x75y12_7000_us_2x_2021-10-20T113607_corr'
+PATH_OUT = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/' + file + '/'
 ext = '.hdr' #'.hyspex'
 
-def crop_image(path, filename, band_step = 1, apply_mask = False):
-    arr_bbox, masks = preprocessing(path, filename)
+def crop_image(path_in, path_out, filename, band_step = 1, apply_mask = False):
+    arr_bbox, masks = preprocessing(path_in, filename)
     all_heights = []
     all_widths = []
     for k in range(0, len(arr_bbox), band_step):
@@ -38,20 +38,21 @@ def crop_image(path, filename, band_step = 1, apply_mask = False):
         n_bands = 216 // band_step
         new_img = np.zeros((max_width, max_height, n_bands))
 
-        if apply_mask:
-            for j in range(0, 216, band_step):
-                new_img[x1:x2, y1:y2, j] = cv2.bitwise_and(grain_img, grain_img, mask = masks[j])
-        else:
-            new_img[x1:x2, y1:y2, :] = grain_img
+        for j in range(n_bands):
+            if apply_mask:
+                new_img[x1:x2, y1:y2, j] = cv2.bitwise_and(grain_img, grain_img, mask = masks[j * band_step])
+            else:
+                new_img[x1:x2, y1:y2, j] = grain_img[:, :, j ]
 
-        file_name = path + 'grain' + str(k) + '.hdr'
+        file_name = path_out + 'grain' + str(k) + '.hdr'
         envi.save_image(file_name, new_img, force = True)
 
-'''
-file = 'grain2'
+crop_image(PATH, PATH_OUT, file, band_step = 20)
+
+file = 'grain0'
 img = sp.open_image(PATH_OUT + file + ext)
 print(img.shape)
-img0 = img[:, :, 100]
+img0 = img[:, :, 5]
 plt.imshow(img0)
 plt.show()
-'''
+
