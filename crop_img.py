@@ -57,7 +57,7 @@ PATH = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/'
 file = 'var8-x75y12_7000_us_2x_2021-10-20T113607_corr'
 PATH_OUT = PATH + file + '/'
 ext = '.hdr'  # '.hyspex'
-crop_image(PATH, PATH_OUT, file, ext, band_step=20)
+crop_image(PATH, PATH_OUT, file, ext, band_step=20, apply_mask=True, force_creation=False)
 
 file = 'grain1'
 img = sp.open_image(PATH_OUT + file + ext)
