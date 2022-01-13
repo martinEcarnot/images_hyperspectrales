@@ -9,7 +9,7 @@ from tqdm import tqdm
 import os
 
 
-def crop_image(path_in, path_out, filename, ext, band_step=1, apply_mask=False, force_creation=False):
+def crop_image(path_in, path_out, filename, ext, band_step=1, apply_mask=True, force_creation=False):
     bool_file = 0
     if not os.path.exists(path_out):
         os.makedirs(path_out)
@@ -41,10 +41,12 @@ def crop_image(path_in, path_out, filename, ext, band_step=1, apply_mask=False, 
             new_img = np.zeros((max_width, max_height, n_bands))
 
             for j in range(n_bands):
+                new_grain = grain_img[:, :, j * band_step]
                 if apply_mask:
-                    new_img[x1:x2, y1:y2, j] = cv2.bitwise_and(grain_img, grain_img, mask=masks[j * band_step])
+                    dst = cv2.bitwise_and(new_grain, new_grain, mask = np.array(masks[k]).transpose())
+                    new_img[x1:x2, y1:y2, j] = dst
                 else:
-                    new_img[x1:x2, y1:y2, j] = grain_img[:, :, j * band_step]
+                    new_img[x1:x2, y1:y2, j] = new_grain
 
             file_name = path_out + 'grain' + str(k) + '.hdr'
             envi.save_image(file_name, new_img, force=True)
@@ -57,9 +59,9 @@ PATH_OUT = PATH + file + '/'
 ext = '.hdr'  # '.hyspex'
 crop_image(PATH, PATH_OUT, file, ext, band_step=20)
 
-file = 'grain0'
+file = 'grain1'
 img = sp.open_image(PATH_OUT + file + ext)
 print(img.shape)
 img0 = img[:, :, 5]
-plt.imshow(img0)
+plt.imshow(img0, cmap = 'Greys_r')
 plt.show()
