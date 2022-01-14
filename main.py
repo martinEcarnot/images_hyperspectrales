@@ -1,7 +1,9 @@
 # from preprocessing import preprocessing
-from crop_img import crop_image
-import matplotlib.pyplot as plt
-import spectral as sp
+# from crop_img import crop_image
+# import matplotlib.pyplot as plt
+# import spectral as sp
+from deep_learning import *
+from torch.utils.data import DataLoader
 
 # Set path
 PATH = "D:/Etude technique/"
@@ -11,6 +13,7 @@ PATH = "D:/Etude technique/"
 # file = 'var8-x75y12_7000_us_2x_2021-10-20T113607_corr'
 file = "x30y21-var1_11000_us_2x_2020-12-02T095609_corr"
 
+"""
 # Preprocessing only
 
 # sImg = "var8-x75y12_7000_us_2x_2021-10-20T113607_corr"
@@ -36,3 +39,25 @@ img0 = img[:, :, 5]
 plt.imshow(img0, cmap='gray')
 plt.show()
 
+"""
+
+use_path_ = "D:\\Etude technique"
+
+df_path = load(use_path_)
+# print(df_path.columns)
+# print(df_path)
+
+
+# Create datasets
+train_set = CustomDataset(df_path)
+# valid_set = CustomDataset(df_path_valid)
+# test_set = CustomDataset(df_path_test)
+
+# Create data loaders
+batch_size = 32
+trainloader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
+for files, labels in trainloader:
+    print(files)
+    print("LABELS :", labels)
+# validloader = DataLoader(valid_set, batch_size = batch_size, shuffle = True)
+# testloader = DataLoader(test_set, batch_size = batch_size, shuffle = True)
