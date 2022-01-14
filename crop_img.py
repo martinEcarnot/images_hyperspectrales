@@ -1,8 +1,6 @@
 import cv2
-import matplotlib.pyplot as plt
 import spectral as sp
 import spectral.io.envi as envi
-# import spectral.io.bipfile as bf
 import numpy as np
 from preprocessing import preprocessing
 from tqdm import tqdm
@@ -50,18 +48,3 @@ def crop_image(path_in, path_out, filename, ext, band_step=1, apply_mask=True, f
 
             file_name = path_out + 'grain' + str(k) + '.hdr'
             envi.save_image(file_name, new_img, force=True)
-
-
-PATH = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/'
-#PATH = "D:/Etude technique/"
-file = 'var8-x75y12_7000_us_2x_2021-10-20T113607_corr'
-PATH_OUT = PATH + file + '/'
-ext = '.hdr'  # '.hyspex'
-crop_image(PATH, PATH_OUT, file, ext, band_step=20, apply_mask=True, force_creation=False)
-
-file = 'grain1'
-img = sp.open_image(PATH_OUT + file + ext)
-print(img.shape)
-img0 = img[:, :, 5]
-plt.imshow(img0, cmap = 'Greys_r')
-plt.show()
