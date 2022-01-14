@@ -153,9 +153,13 @@ class CNN(nn.Module):
         return x
 
 use_path_ = "D:\\Etude technique"
-df_path = load(use_path_)
+use_path_ = "D:\\Etude technique"
 
-dataset = Custom_Dataset(movement_dir_train)
+df_path_train = load(use_path_train)
+df_path_test = load(use_path_test)
+
+train_set = Custom_Dataset(movement_dir_train)
+test_set = Custom_Dataset(movement_dir_train)
 
 epochs = 20
 batch_size = 16
