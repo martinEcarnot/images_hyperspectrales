@@ -152,8 +152,8 @@ class CNN(nn.Module):
         x = self.softmax(x)
         return x
 
-use_path_ = "D:\\Etude technique"
-use_path_ = "D:\\Etude technique"
+use_path_train = "D:\\Etude technique/"
+use_path_test = "D:\\Etude technique"
 
 df_path_train = load(use_path_train)
 df_path_test = load(use_path_test)
