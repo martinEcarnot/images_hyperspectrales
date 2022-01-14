@@ -7,23 +7,41 @@ from tqdm import tqdm
 import os
 
 
-def crop_image(path_in, path_out, filename, ext, band_step=1, apply_mask=True, force_creation=False):
+def crop_image(path_in, path_out, filename, ext, thresh_lum_spectralon=22000, crop_idx_dim1=1000,
+               band_step=1, apply_mask=False, force_creation=False):
+    """
+
+
+    :param path_in:
+    :param path_out:
+    :param filename:
+    :param ext:
+    :param thresh_lum_spectralon:
+    :param crop_idx_dim1:
+    :param band_step:
+    :param apply_mask:
+    :param force_creation:
+    :return:
+    """
     bool_file = 0
     if not os.path.exists(path_out):
         os.makedirs(path_out)
         bool_file = 1
     if bool_file or force_creation:
-        arr_bbox, masks = preprocessing(path_in, filename)
-        all_heights = []
-        all_widths = []
-        for k in range(len(arr_bbox)):
-            width = arr_bbox[k][3] - arr_bbox[k][1]
-            height = arr_bbox[k][2] - arr_bbox[k][0]
-            all_widths.append(width)
-            all_heights.append(height)
-
-        max_height = max(all_heights)
-        max_width = max(all_widths)
+        arr_bbox, masks = preprocessing(path_in, filename, thresh_lum_spectralon=thresh_lum_spectralon,
+                                        crop_idx_dim1=crop_idx_dim1)
+        # all_heights = []
+        # all_widths = []
+        # for k in range(len(arr_bbox)):
+        #     width = arr_bbox[k][3] - arr_bbox[k][1]
+        #     height = arr_bbox[k][2] - arr_bbox[k][0]
+        #     all_widths.append(width)
+        #     all_heights.append(height)
+        # max_height = max(all_heights)
+        # max_width = max(all_widths)
+        # Static max for the neural network to work
+        max_height = 180
+        max_width = 180
 
         img = sp.open_image(path_in + filename + ext)
         for k in tqdm(range(len(arr_bbox))):
@@ -41,7 +59,7 @@ def crop_image(path_in, path_out, filename, ext, band_step=1, apply_mask=True, f
             for j in range(n_bands):
                 new_grain = grain_img[:, :, j * band_step]
                 if apply_mask:
-                    dst = cv2.bitwise_and(new_grain, new_grain, mask = np.array(masks[k]).transpose())
+                    dst = cv2.bitwise_and(new_grain, new_grain, mask=np.array(masks[k]).transpose())
                     new_img[x1:x2, y1:y2, j] = dst
                 else:
                     new_img[x1:x2, y1:y2, j] = new_grain
