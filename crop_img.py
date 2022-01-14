@@ -5,6 +5,7 @@ import numpy as np
 from preprocessing import preprocessing
 from tqdm import tqdm
 import os
+from os import walk
 
 
 def crop_image(path_in, path_out, filename, ext, thresh_lum_spectralon=22000, crop_idx_dim1=1000,
@@ -66,3 +67,24 @@ def crop_image(path_in, path_out, filename, ext, thresh_lum_spectralon=22000, cr
 
             file_name = path_out + 'grain' + str(k) + '.hdr'
             envi.save_image(file_name, new_img, force=True)
+
+
+def crop_all_images(use_path):
+    all_files = next(walk(use_path), (None, None, []))[2]
+    hdr_files = [x for x in all_files if "hdr" in x]
+    train_path = os.path.join(use_path, "train")
+    test_path = os.path.join(use_path, "test")
+    if not os.path.exists(train_path):
+        os.makedirs(train_path)
+    if not os.path.exists(test_path):
+        os.makedirs(test_path)
+
+    ext = '.hdr'
+    thresh_lum_spectralon_ = 8000
+    crop_idx_dim1_ = 1200
+    path = os.path.join(use_path, "")
+    for file in hdr_files:
+        filename = file[:-4]
+        path_out = os.path.join(test_path, filename, "") if "2021" in file else os.path.join(train_path, filename, "")
+        crop_image(path, path_out, filename, ext, thresh_lum_spectralon=thresh_lum_spectralon_,
+                   crop_idx_dim1=crop_idx_dim1_, band_step=20, apply_mask=True, force_creation=True)
