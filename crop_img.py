@@ -1,21 +1,35 @@
 import cv2
-import matplotlib.pyplot as plt
 import spectral as sp
 import spectral.io.envi as envi
-# import spectral.io.bipfile as bf
 import numpy as np
 from preprocessing import preprocessing
 from tqdm import tqdm
 import os
 
 
-def crop_image(path_in, path_out, filename, ext, band_step=1, apply_mask=True, force_creation=False):
+def crop_image(path_in, path_out, filename, ext, thresh_lum_spectralon=22000, crop_idx_dim1=1000,
+               band_step=1, apply_mask=False, force_creation=False):
+    """
+
+
+    :param path_in:
+    :param path_out:
+    :param filename:
+    :param ext:
+    :param thresh_lum_spectralon:
+    :param crop_idx_dim1:
+    :param band_step:
+    :param apply_mask:
+    :param force_creation:
+    :return:
+    """
     bool_file = 0
     if not os.path.exists(path_out):
         os.makedirs(path_out)
         bool_file = 1
     if bool_file or force_creation:
-        arr_bbox, masks = preprocessing(path_in, filename)
+        arr_bbox, masks = preprocessing(path_in, filename, thresh_lum_spectralon=thresh_lum_spectralon,
+                                        crop_idx_dim1=crop_idx_dim1)
         all_heights = []
         all_widths = []
         for k in range(len(arr_bbox)):
@@ -43,25 +57,10 @@ def crop_image(path_in, path_out, filename, ext, band_step=1, apply_mask=True, f
             for j in range(n_bands):
                 new_grain = grain_img[:, :, j * band_step]
                 if apply_mask:
-                    dst = cv2.bitwise_and(new_grain, new_grain, mask = np.array(masks[k]).transpose())
+                    dst = cv2.bitwise_and(new_grain, new_grain, mask=np.array(masks[k]).transpose())
                     new_img[x1:x2, y1:y2, j] = dst
                 else:
                     new_img[x1:x2, y1:y2, j] = new_grain
 
             file_name = path_out + 'grain' + str(k) + '.hdr'
             envi.save_image(file_name, new_img, force=True)
-
-
-PATH = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/'
-#PATH = "D:/Etude technique/"
-file = 'var8-x75y12_7000_us_2x_2021-10-20T113607_corr'
-PATH_OUT = PATH + file + '/'
-ext = '.hdr'  # '.hyspex'
-crop_image(PATH, PATH_OUT, file, ext, band_step=20, apply_mask=True, force_creation=False)
-
-file = 'grain1'
-img = sp.open_image(PATH_OUT + file + ext)
-print(img.shape)
-img0 = img[:, :, 5]
-plt.imshow(img0, cmap = 'Greys_r')
-plt.show()

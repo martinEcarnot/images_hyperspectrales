@@ -177,13 +177,3 @@ def create_mask(im_bar, array_bbox_bar_res, list_regions_bar):
         list_mask.append(mask)
     return list_mask
 
-
-PATH = "D:/Etude technique/"
-# PATH = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/'
-sImg = "var8-x75y12_7000_us_2x_2021-10-20T113607_corr"
-
-array_bbox_, masks = preprocessing(PATH, sImg)
-# print(array_bbox_)
-print(array_bbox_.shape)
-print(len(masks))
-
