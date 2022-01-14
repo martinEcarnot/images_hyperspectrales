@@ -71,24 +71,41 @@ class CNN(nn.Module):
         super().__init__()
         # 4 conv blocks / flatten / linear / softmax
 
-        # 200, 200, 10 -> 200, 200, 10
+        # 200, 200, 10 -> 200, 200, 30
         self.conv1 = nn.Conv2d(in_channels=10, out_channels=30, kernel_size=(5, 5), padding=(2, 2))
-        # 56, 60, 16 -> #28, 30, 16
-        self.pool1 = nn.MaxPool2d(kernel_size=2, padding=(1, 0))
-        # 56, 60, 16 -> #28, 30, 16
-        self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(3, 3), stride=1, padding=0)
+        # 200, 200, 30 -> 100, 100, 30
+        self.pool1 = nn.MaxPool2d(kernel_size=2)
+
+        # 100, 100, 30 -> 100, 100, 60
+        self.conv2 = nn.Conv2d(in_channels=30, out_channels=60, kernel_size=(5, 5), padding=(2, 2))
+        # 100, 100, 60 -> 50, 50, 60
         self.pool2 = nn.MaxPool2d(kernel_size=2)
-        # 26, 28, 32 -> #13, 14, 32
-        self.conv3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(3, 3), stride=1)
-        self.pool3 = nn.MaxPool2d(kernel_size=2, padding=(1, 0))
-        # 11, 12, 64 -> #6, 6, 64
-        self.conv4 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(6, 6), stride=1)
-        # 1, 1, 128 -> #1, 1, 128
+
+        # 50, 50, 60 -> 50, 50, 120
+        self.conv3 = nn.Conv2d(in_channels=60, out_channels=120, kernel_size=(5, 5), padding=(2, 2))
+        # 50, 50,120 -> 25, 25, 120
+        self.pool3 = nn.MaxPool2d(kernel_size=2)
+
+        # 25, 25, 120 -> 25, 25, 150
+        self.conv4 = nn.Conv2d(in_channels=120, out_channels=150, kernel_size=(5, 5), padding=(2, 2))
+        # 25, 25, 150 -> 12, 12, 150
+        self.pool4 = nn.MaxPool2d(kernel_size=2)
+
+        # 12, 12, 150 -> 12, 12, 200
+        self.conv5 = nn.Conv2d(in_channels=150, out_channels=200, kernel_size=(5, 5), padding=(2, 2))
+        # 12, 12, 200 -> 6, 6, 200
+        self.pool5 = nn.MaxPool2d(kernel_size=2)
+
+        # 6, 6, 200 -> 4, 4, 250
+        self.conv6 = nn.Conv2d(in_channels=200, out_channels=250, kernel_size=(3, 3))
+        # 4, 4, 250 -> 2, 2, 250
+        self.pool6 = nn.MaxPool2d(kernel_size=2)
+
         self.relu = nn.ReLU()
         self.flatten = nn.Flatten()
-        self.linear1 = nn.Linear(128, 30)
-        self.tanh = nn.Tanh()
-        self.linear2 = nn.Linear(30, 2)
+        self.linear1 = nn.Linear(1000, 20)
+        self.linear2 = nn.Linear(20, 20)
+        self.linear3 = nn.Linear(20, 2)
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, input_data):
@@ -103,15 +120,31 @@ class CNN(nn.Module):
         x = self.tanh(x)
         # print("x.shape: ", x.shape)
         x = self.pool2(x)
+
         # print("x.shape: ", x.shape)
         x = self.conv3(x)
         x = self.tanh(x)
         # print("x.shape: ", x.shape)
         x = self.pool3(x)
+
         # print("x.shape: ", x.shape)
         x = self.conv4(x)
         x = self.tanh(x)
         # print("x.shape: ", x.shape)
+        x = self.pool4(x)
+
+        # print("x.shape: ", x.shape)
+        x = self.conv5(x)
+        x = self.tanh(x)
+        # print("x.shape: ", x.shape)
+        x = self.pool5(x)
+
+        # print("x.shape: ", x.shape)
+        x = self.conv6(x)
+        x = self.tanh(x)
+        # print("x.shape: ", x.shape)
+        x = self.pool6(x)
+
         x = self.flatten(x)
         x = self.linear1(x)
         x = self.relu(x)
