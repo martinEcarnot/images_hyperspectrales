@@ -65,15 +65,15 @@ class CustomDataset(Dataset):
 
         return img_tensor, label
 
-
 class CNN(nn.Module):
 
     def __init__(self):
         super().__init__()
         # 4 conv blocks / flatten / linear / softmax
 
-        # 55, 180, 1 -> #55, 60, 30
-        self.conv1 = nn.Conv2d(in_channels=10, out_channels=30, kernel_size=(3, 9), stride=(1, 3), padding=(1, 4))
+        # 200, 200, 10 -> 200, 200, 10
+        self.conv1 = nn.Conv2d(in_channels=10, out_channels=30, kernel_size=(5, 5), padding=(2, 2))
+        # 56, 60, 16 -> #28, 30, 16
         self.pool1 = nn.MaxPool2d(kernel_size=2, padding=(1, 0))
         # 56, 60, 16 -> #28, 30, 16
         self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(3, 3), stride=1, padding=0)
@@ -119,17 +119,13 @@ class CNN(nn.Module):
         x = self.softmax(x)
         return x
 
+use_path_ = "D:\\Etude technique"
+df_path = load(use_path_)
 
-movement_dir_train = 'C:/Users/kiera/Documents/EMA/3A/2IA/Deep Learning/Projet/data/project/train/'
-movement_dir_valid = 'C:/Users/kiera/Documents/EMA/3A/2IA/Deep Learning/Projet/data/project/valid/'
-movement_dir_test = 'C:/Users/kiera/Documents/EMA/3A/2IA/Deep Learning/Projet/data/project/test/'
+dataset = Custom_Dataset(movement_dir_train)
 
-train_set = Movement_Dataset(movement_dir_train)
-valid_set = Movement_Dataset(movement_dir_valid)
-test_set = Movement_Dataset(movement_dir_test)
-
-epochs = 200
-batch_size = 200
+epochs = 20
+batch_size = 16
 
 # Create data loaders
 trainloader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
