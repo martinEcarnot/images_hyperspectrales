@@ -156,7 +156,7 @@ df_path_test = load(use_path_test)
 train_set = CustomDataset(df_path_train)
 test_set = CustomDataset(df_path_test)
 
-epochs = 50
+epochs = 30
 batch_size = 12
 
 # Create data loaders
