@@ -1,4 +1,5 @@
 # Global import
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import os
@@ -77,79 +78,70 @@ class CNN(nn.Module):
         super().__init__()
         # 4 conv blocks / flatten / linear / softmax
 
-        # 180, 180, 10 -> 180, 180, 30
-        self.conv1 = nn.Conv2d(in_channels=10, out_channels=30, kernel_size=(5, 5))
-        # 180, 180, 30 -> 90, 90, 30
+        self.conv1 = nn.Conv2d(in_channels=10, out_channels=80, kernel_size=(7, 7), stride=(3, 3))
         self.pool1 = nn.MaxPool2d(kernel_size=2)
 
-        # 90, 90, 30 -> 90, 90, 60
-        self.conv2 = nn.Conv2d(in_channels=30, out_channels=60, kernel_size=(5, 5), padding=(2, 2))
-        # 90, 90, 60 -> 45, 45, 60
+        self.conv2 = nn.Conv2d(in_channels=80, out_channels=160, kernel_size=(5, 5))
         self.pool2 = nn.MaxPool2d(kernel_size=2)
 
-        # 45, 45, 60 -> 45, 45, 120
-        self.conv3 = nn.Conv2d(in_channels=60, out_channels=120, kernel_size=(5, 5), padding=(2, 2))
-        # 45, 45, 120 -> 15, 15, 120
+        self.conv3 = nn.Conv2d(in_channels=160, out_channels=320, kernel_size=(3, 3))
         self.pool3 = nn.MaxPool2d(kernel_size=2)
 
-        # 15, 15, 120 -> 15, 15, 150
-        self.conv4 = nn.Conv2d(in_channels=120, out_channels=150, kernel_size=(5, 5), padding=(2, 2))
-        # 15, 15, 150 -> 5, 5, 150
+        self.conv4 = nn.Conv2d(in_channels=320, out_channels=640, kernel_size=(3, 3))
         self.pool4 = nn.MaxPool2d(kernel_size=2)
 
-        # 5, 5, 150 -> 5, 5, 200
-        self.conv5 = nn.Conv2d(in_channels=150, out_channels=200, kernel_size=(5, 5), padding=(2, 2))
-        # 5, 5, 200 -> 6, 6, 200
+        self.conv5 = nn.Conv2d(in_channels=640, out_channels=640, kernel_size=(3, 3))
         self.pool5 = nn.MaxPool2d(kernel_size=2)
 
-        # 6, 6, 200 -> 4, 4, 250
-        self.conv6 = nn.Conv2d(in_channels=200, out_channels=250, kernel_size=(3, 3))
-        # 4, 4, 250 -> 2, 2, 250
+        self.conv6 = nn.Conv2d(in_channels=640, out_channels=640, kernel_size=(3, 3))
         self.pool6 = nn.MaxPool2d(kernel_size=2)
 
         self.relu = nn.ReLU()
+        self.tanh = nn.Tanh()
         self.flatten = nn.Flatten()
-        self.linear1 = nn.Linear(3*3*250, 20)
-        self.linear2 = nn.Linear(20, 20)
-        self.linear3 = nn.Linear(20, 2)
+        self.linear1 = nn.Linear(3*3*640, 300)
+        # self.linear2 = nn.Linear(20, 20)
+        self.linear3 = nn.Linear(300, 2)
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, input_data):
         # print("x.shape 0: ", input_data.shape)
         x = self.conv1(input_data)
+        x = self.tanh(x)
         # print("x.shape 1: ", x.shape)
         x = self.pool1(x)
         # print("x.shape 1: ", x.shape)
 
         x = self.conv2(x)
+        x = self.relu(x)
         # print("x.shape 2: ", x.shape)
         x = self.pool2(x)
         # print("x.shape 2: ", x.shape)
 
         x = self.conv3(x)
+        x = self.relu(x)
         # print("x.shape 3: ", x.shape)
         x = self.pool3(x)
         # print("x.shape 3: ", x.shape)
 
         x = self.conv4(x)
+        x = self.relu(x)
         # print("x.shape 4: ", x.shape)
-        x = self.pool4(x)
+        # x = self.pool4(x)
         # print("x.shape 4: ", x.shape)
-
-        x = self.conv5(x)
-        # print("x.shape 5: ", x.shape)
-        x = self.pool5(x)
-        # print("x.shape 5: ", x.shape)
-
-        x = self.conv6(x)
-        # print("x.shape 6: ", x.shape)
+        # exit()
+        # x = self.conv5(x)
+        # x = self.relu(x)
+        # # print("x.shape 5: ", x.shape)
+        # x = self.pool5(x)
+        # # print("x.shape 5: ", x.shape)
+        # # exit()
+        #
         # x = self.pool6(x)
         # print("x.shape 6: ", x.shape)
-
+        # exit()
         x = self.flatten(x)
         x = self.linear1(x)
-        x = self.relu(x)
-        x = self.linear2(x)
         x = self.relu(x)
         x = self.linear3(x)
         x = self.softmax(x)
@@ -164,8 +156,8 @@ df_path_test = load(use_path_test)
 train_set = CustomDataset(df_path_train)
 test_set = CustomDataset(df_path_test)
 
-epochs = 20
-batch_size = 16
+epochs = 50
+batch_size = 12
 
 # Create data loaders
 trainloader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
@@ -178,20 +170,31 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = CNN().to(device)
 model = model.double()
 optimizer = torch.optim.Adam(model.parameters())
-criterion = nn.BCELoss(torch.tensor([1, 4]))
+criterion = nn.BCELoss()
 
 # print(model)
-
+all_losses = []
+all_accuracy = []
 for epoch in range(epochs):
     model.train()
     losses = []
-    correct = 0
-    total = 0
+
+    corrects = 0
+    nbs_0 = 0
+    nbs_1 = 0
+
     for batch_num, input_data in enumerate(trainloader):
         optimizer.zero_grad()
         x, y = input_data
         # print(x.shape)
-        x = x.view((16, 10, 180, 180))
+        x = x.permute(0, 3, 1, 2) / 64
+        # img = np.array(x[0][5][:][:])
+        # print(max(img[60]), min(img[60]))
+        # exit()
+
+        # plt.imshow(img)
+        # plt.show()
+        # exit()
         # print(x.shape)
         # print(y)
 
@@ -202,15 +205,29 @@ for epoch in range(epochs):
         # print(x.shape, y.shape)
 
         output = model(x)
-        s = nn.Softmax()
-        pred = s(output)
-        # print('pred', pred)
+        pred = output
+        # print('pred', pred[0], 'label', y[0])
         # print('y', y)
-        for k in range(len(pred)):
-            if pred[k][0] > 0.5 and y[k][0] == 1:
-                correct += 1
-            elif pred[k][0] < 0.5 and y[k][1] == 1:
-                correct += 1
+        correct = 0
+        total = 0
+        nb_0 = 0
+        nb_1 = 0
+
+        for k in range(len(output)):
+            # print(label)
+            # print(output[k])
+            if float(output[k][0].item()) > float(output[k][1].item()):
+                if int(y[k][0].item()) == 1:
+                    correct += 1
+                    corrects += 1
+                nb_0 += 1
+                nbs_0 += 1
+            elif float(output[k][1].item()) >= float(output[k][0].item()):
+                if int(y[k][1].item()) == 1:
+                    correct += 1
+                    corrects += 1
+                nb_1 += 1
+                nbs_1 += 1
             total += 1
         # print('output', s(output))
         # print('y', y)
@@ -221,9 +238,18 @@ for epoch in range(epochs):
 
         optimizer.step()
 
-        if batch_num % 1 == 0:
+        if batch_num % 5 == 0:
             print('\tEpoch %d | Batch %d | Loss %6.2f | Accuracy %6.2f' % (
-            epoch, batch_num, loss.item(), correct / total))
+                  epoch, batch_num, loss.item(), correct / total))
     print('Epoch %d | Loss %6.2f | Accuracy %6.2f' % (
           epoch, sum(losses) / len(losses), correct / total))
+
+    all_losses.append(sum(losses) / len(losses))
+    all_accuracy.append(corrects / len(train_set))
+
+    if epoch % 4 == 0 and epoch != 0:
+        plt.plot(range(len(all_losses)), all_losses)
+        plt.show()
+        plt.plot(range(len(all_accuracy)), all_accuracy)
+        plt.show()
 
