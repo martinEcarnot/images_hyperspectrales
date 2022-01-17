@@ -171,7 +171,6 @@ model = CNN().to(device)
 model = model.double()
 optimizer = torch.optim.Adam(model.parameters())
 criterion = nn.BCELoss()
-
 # print(model)
 all_losses = []
 all_accuracy = []
