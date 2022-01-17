@@ -194,7 +194,6 @@ for epoch in range(epochs):
 
         # plt.imshow(img)
         # plt.show()
-        # exit()
         # print(x.shape)
         # print(y)
 
