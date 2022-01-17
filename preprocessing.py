@@ -23,7 +23,7 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1000, thresh_refl=0.15, thre
 
     :param folder_path: PATH of hyperspectral images
     :param s_img: name of a hyperspectral image
-    :param crop_idx_dim1: indexe of the edge of the spectralon
+    :param crop_idx_dim1: index of the edge of the spectralon
     :param thresh_refl: threshold of reflectance to remove background
     :param thresh_lum_spectralon: threshold of light intensity to remove background + milli
     :param band: spectral band to extract (#100 : 681 nm)
