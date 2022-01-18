@@ -245,9 +245,42 @@ for epoch in range(epochs):
     all_losses.append(sum(losses) / len(losses))
     all_accuracy.append(corrects / len(train_set))
 
-    if epoch % 4 == 0 and epoch != 0:
+    if epoch % 15 == 0 and epoch != 0:
         plt.plot(range(len(all_losses)), all_losses)
         plt.show()
         plt.plot(range(len(all_accuracy)), all_accuracy)
         plt.show()
+
+model.eval()
+losses = []
+corrects, totals = 0, 0
+
+for batch_num, input_data in enumerate(trainloader):
+    x, y = input_data
+    x = x.permute(0, 3, 1, 2) / 64
+
+    x = x.to(device).double()
+    y = y.to(device).double()
+
+    output = model(x)
+    pred = output
+
+    correct, total = 0, 0
+
+    for k in range(len(output)):
+        if float(output[k][0].item()) > float(output[k][1].item()):
+            if int(y[k][0].item()) == 1:
+                correct += 1
+                corrects += 1
+        elif float(output[k][1].item()) >= float(output[k][0].item()):
+            if int(y[k][1].item()) == 1:
+                correct += 1
+                corrects += 1
+        total += 1
+        totals += 1
+
+    loss = criterion(output, y)
+    losses.append(loss.item())
+
+print('Test Loss %6.2f | Test Accuracy %6.2f' % (sum(losses) / len(losses), corrects / totals))
 
