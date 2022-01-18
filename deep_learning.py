@@ -156,7 +156,7 @@ df_path_test = load(use_path_test)
 train_set = CustomDataset(df_path_train)
 test_set = CustomDataset(df_path_test)
 
-epochs = 30
+epochs = 17
 batch_size = 12
 
 # Create data loaders
@@ -236,11 +236,11 @@ for epoch in range(epochs):
 
         optimizer.step()
 
-        if batch_num % 5 == 0:
+        if batch_num % 20 == 0:
             print('\tEpoch %d | Batch %d | Loss %6.2f | Accuracy %6.2f' % (
                   epoch, batch_num, loss.item(), correct / total))
     print('Epoch %d | Loss %6.2f | Accuracy %6.2f' % (
-          epoch, sum(losses) / len(losses), correct / total))
+          epoch, sum(losses) / len(losses), corrects / len(train_set)))
 
     all_losses.append(sum(losses) / len(losses))
     all_accuracy.append(corrects / len(train_set))
