@@ -73,11 +73,11 @@ class CustomDataset(Dataset):
 
 class CNN(nn.Module):
 
-    def __init__(self):
+    def __init__(self, n_channel):
         super().__init__()
         # 4 conv blocks / flatten / linear / softmax
 
-        self.conv1 = nn.Conv2d(in_channels=10, out_channels=80, kernel_size=(7, 7), stride=(3, 3))
+        self.conv1 = nn.Conv2d(in_channels=n_channel, out_channels=80, kernel_size=(7, 7), stride=(3, 3))
         self.pool1 = nn.MaxPool2d(kernel_size=2)
 
         self.conv2 = nn.Conv2d(in_channels=80, out_channels=160, kernel_size=(5, 5))
@@ -148,16 +148,17 @@ class CNN(nn.Module):
 
 use_path_train = "E:\\Etude technique\\raw\\train"
 use_path_test = "E:\\Etude technique\\raw\\test"
-use_path_model = "E:\\Etude technique\\model"
+use_path_model = "E:\\Etude technique\\model\\model0.pth"
 
 def train_model(train_path, verbose=False, epochs=20, batch_size=12):
+    print('training...')
     df_path_train = load(train_path)
     train_set = CustomDataset(df_path_train)
     trainloader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    model = CNN().to(device)
+    #test
+    model = CNN(10).to(device)
     model = model.double()
     optimizer = torch.optim.Adam(model.parameters())
     criterion = nn.BCELoss()
@@ -240,21 +241,17 @@ def test_model(model_, test_path, verbose=False, batch_size=12):
 
         output = model_(x)
 
-        correct, total = 0, 0
-
         for k in range(len(output)):
             if float(output[k][0].item()) > float(output[k][1].item()):
                 if int(y[k][0].item()) == 1:
-                    correct += 1
                     corrects += 1
+
             elif float(output[k][1].item()) >= float(output[k][0].item()):
                 if int(y[k][1].item()) == 1:
-                    correct += 1
                     corrects += 1
-            total += 1
             totals += 1
 
-    print('Test Accuracy %6.2f' % (corrects / totals))
+    print('Test Accuracy %6.2f' % (corrects / len(test_set)))
 
 def save_model(model_, save_path):
     torch.save(model_, save_path)
@@ -263,8 +260,11 @@ def load_model(load_path):
     model_ = torch.load(load_path)
     return model_
 
-model = train_model(use_path_train)
-test_model(model, use_path_test)
+# model = train_model(use_path_train, epochs=15)
+# test_model(model, use_path_test)
 
-save_model(model, use_path_model)
+# save_model(model, use_path_model)
+model0 = load_model(use_path_model)
+test_model(model0, use_path_test)
+
 print('Done')
