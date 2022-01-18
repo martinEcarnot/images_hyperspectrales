@@ -245,11 +245,10 @@ for epoch in range(epochs):
     all_losses.append(sum(losses) / len(losses))
     all_accuracy.append(corrects / len(train_set))
 
-    if epoch % 15 == 0 and epoch != 0:
-        plt.plot(range(len(all_losses)), all_losses)
-        plt.show()
-        plt.plot(range(len(all_accuracy)), all_accuracy)
-        plt.show()
+plt.plot(range(len(all_losses)), all_losses)
+plt.show()
+plt.plot(range(len(all_accuracy)), all_accuracy)
+plt.show()
 
 model.eval()
 losses = []
