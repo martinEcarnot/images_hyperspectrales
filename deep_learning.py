@@ -99,6 +99,7 @@ class CNN(nn.Module):
         self.tanh = nn.Tanh()
         self.flatten = nn.Flatten()
         self.linear1 = nn.Linear(3*3*640, 300)
+        self.dropout = nn.Dropout(0.4)
         # self.linear2 = nn.Linear(20, 20)
         self.linear3 = nn.Linear(300, 2)
         self.softmax = nn.Softmax(dim=1)
@@ -141,8 +142,10 @@ class CNN(nn.Module):
         # exit()
         x = self.flatten(x)
         x = self.linear1(x)
+        x = self.dropout(x)
         x = self.relu(x)
         x = self.linear3(x)
+        x = self.dropout(x)
         x = self.softmax(x)
         return x
 
