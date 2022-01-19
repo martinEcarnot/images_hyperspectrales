@@ -79,69 +79,48 @@ class CNN(nn.Module):
         super().__init__()
         # 4 conv blocks / flatten / linear / softmax
 
-        self.conv1 = nn.Conv2d(in_channels=dim_in, out_channels=80, kernel_size=(7, 7), stride=(3, 3))
-        self.pool1 = nn.MaxPool2d(kernel_size=2)
+        self.conv1_0 = nn.Conv2d(in_channels=dim_in, out_channels=20, kernel_size=(3, 3), padding=(1, 1))
+        self.conv1_1 = nn.Conv2d(in_channels=20, out_channels=40, kernel_size=(7, 7), stride=(3, 3))
 
-        self.conv2 = nn.Conv2d(in_channels=80, out_channels=160, kernel_size=(5, 5))
-        self.pool2 = nn.MaxPool2d(kernel_size=2)
+        self.conv2_1 = nn.Conv2d(in_channels=40, out_channels=80, kernel_size=(5, 5))
 
-        self.conv3 = nn.Conv2d(in_channels=160, out_channels=320, kernel_size=(3, 3))
-        self.pool3 = nn.MaxPool2d(kernel_size=2)
+        self.conv3_1 = nn.Conv2d(in_channels=80, out_channels=120, kernel_size=(3, 3))
+        self.conv3_2 = nn.Conv2d(in_channels=120, out_channels=160, kernel_size=(3, 3), padding=(1, 1))
 
-        self.conv4 = nn.Conv2d(in_channels=320, out_channels=640, kernel_size=(3, 3))
-        self.pool4 = nn.MaxPool2d(kernel_size=2)
+        self.conv4_1 = nn.Conv2d(in_channels=160, out_channels=240, kernel_size=(3, 3))
+        self.conv4_2 = nn.Conv2d(in_channels=240, out_channels=320, kernel_size=(3, 3), padding=(1, 1))
 
-        self.conv5 = nn.Conv2d(in_channels=640, out_channels=640, kernel_size=(3, 3))
-        self.pool5 = nn.MaxPool2d(kernel_size=2)
+        self.conv5_1 = nn.Conv2d(in_channels=320, out_channels=400, kernel_size=(3, 3))
+        self.conv5_2 = nn.Conv2d(in_channels=400, out_channels=500, kernel_size=(3, 3), padding=(1, 1))
+        self.conv5_3 = nn.Conv2d(in_channels=500, out_channels=640, kernel_size=(3, 3), padding=(1, 1))
 
-        self.conv6 = nn.Conv2d(in_channels=640, out_channels=640, kernel_size=(3, 3))
-        self.pool6 = nn.MaxPool2d(kernel_size=2)
+        self.conv6_1 = nn.Conv2d(in_channels=640, out_channels=640, kernel_size=(3, 3))
 
+        self.pool = nn.MaxPool2d(kernel_size=2)
         self.relu = nn.ReLU()
         self.tanh = nn.Tanh()
         self.flatten = nn.Flatten()
-        self.linear1 = nn.Linear(3*3*640, 300)
-        self.dropout = nn.Dropout(0.4)
+        self.linear1 = nn.Linear(1*1*320, 30)
+        self.dropout = nn.Dropout(0.2)
         # self.linear2 = nn.Linear(20, 20)
-        self.linear3 = nn.Linear(300, 2)
+        self.linear3 = nn.Linear(30, 2)
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, input_data):
-        # print("x.shape 0: ", input_data.shape)
-        x = self.conv1(input_data)
-        x = self.tanh(x)
-        # print("x.shape 1: ", x.shape)
-        x = self.pool1(x)
+        x = self.relu(self.conv1_0(input_data))
+        x = self.pool(self.relu(self.conv1_1(x)))
         # print("x.shape 1: ", x.shape)
 
-        x = self.conv2(x)
-        x = self.relu(x)
-        # print("x.shape 2: ", x.shape)
-        x = self.pool2(x)
-        # print("x.shape 2: ", x.shape)
+        x = self.pool(self.relu(self.conv2_1(x)))
 
-        x = self.conv3(x)
-        x = self.relu(x)
-        # print("x.shape 3: ", x.shape)
-        x = self.pool3(x)
-        # print("x.shape 3: ", x.shape)
+        x = self.relu(self.conv3_1(x))
+        x = self.pool(self.relu(self.conv3_2(x)))
         #
-        x = self.conv4(x)
-        x = self.relu(x)
-        # print("x.shape 4: ", x.shape)
-        # x = self.pool4(x)
+        x = self.relu(self.conv4_1(x))
+        x = self.pool(self.relu(self.conv4_2(x)))
         # print("x.shape 4: ", x.shape)
         # exit()
-        # x = self.conv5(x)
-        # x = self.relu(x)
-        # # print("x.shape 5: ", x.shape)
-        # x = self.pool5(x)
-        # # print("x.shape 5: ", x.shape)
-        # # exit()
-        #
-        # x = self.pool6(x)
-        # print("x.shape 6: ", x.shape)
-        # exit()
+
         x = self.flatten(x)
         x = self.linear1(x)
         x = self.dropout(x)
@@ -151,21 +130,22 @@ class CNN(nn.Module):
         x = self.softmax(x)
         return x
 
-# use_path_train = "E:\\Etude technique\\raw\\train"
-# use_path_test = "E:\\Etude technique\\raw\\test"
-# use_path_model = "E:\\Etude technique\\model"
+use_path_train = "E:\\Etude technique\\raw\\train"
+use_path_test = "E:\\Etude technique\\raw\\test"
+use_path_model = "E:\\Etude technique\\model.pth"
 
-
-use_path_train = "D:\\Etude technique\\train"
-use_path_test = "D:\\Etude technique\\test"
-use_path_model = "D:\\Etude technique\\model2.pth"
+# use_path_train = "D:\\Etude technique\\train"
+# use_path_test = "D:\\Etude technique\\test"
+# use_path_model = "D:\\Etude technique\\model.pth"
 
 
 def train_model(train_path, verbose=False, show_result=True, epochs=20, batch_size=12):
+    print('training model')
     df_path_train = load(train_path)
     df_train, df_valid = train_test_split(df_path_train, test_size=0.2)
     df_train, df_valid = df_train.reset_index(), df_valid.reset_index()
-    train_set = CustomDataset(df_train)
+
+    train_set = CustomDataset(df_path_train)
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
     val_set = CustomDataset(df_valid)
@@ -178,6 +158,7 @@ def train_model(train_path, verbose=False, show_result=True, epochs=20, batch_si
         x_in, _ = data
         dim_in = x_in.size()[3]
         break
+
     model = CNN(dim_in).to(device)
     model = model.double()
     optimizer = torch.optim.Adam(model.parameters())
@@ -228,6 +209,7 @@ def train_model(train_path, verbose=False, show_result=True, epochs=20, batch_si
                     print('\tEpoch %d | Batch %d | Loss %6.2f | Accuracy %6.2f' % (
                           epoch, batch_num, loss.item(), correct / total))
 
+        model.eval()
         for batch_num, input_data in enumerate(val_loader):
             x, y = input_data
             x = x.permute(0, 3, 1, 2) / 64
@@ -311,8 +293,8 @@ def load_model(load_path):
     model_ = torch.load(load_path)
     return model_
 
-# model = train_model(use_path_train, use_path_test)
-# test_model(model, use_path_test)
-#
-# save_model(model, use_path_model)
-# print('Done')
+model = train_model(use_path_train)
+test_model(model, use_path_test)
+
+save_model(model, use_path_model)
+print('Done')
