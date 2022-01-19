@@ -75,11 +75,11 @@ class CustomDataset(Dataset):
 
 class CNN(nn.Module):
 
-    def __init__(self):
+    def __init__(self, dim_in):
         super().__init__()
         # 4 conv blocks / flatten / linear / softmax
 
-        self.conv1 = nn.Conv2d(in_channels=10, out_channels=80, kernel_size=(7, 7), stride=(3, 3))
+        self.conv1 = nn.Conv2d(in_channels=dim_in, out_channels=80, kernel_size=(7, 7), stride=(3, 3))
         self.pool1 = nn.MaxPool2d(kernel_size=2)
 
         self.conv2 = nn.Conv2d(in_channels=80, out_channels=160, kernel_size=(5, 5))
@@ -158,13 +158,14 @@ class CNN(nn.Module):
 
 use_path_train = "D:\\Etude technique\\train"
 use_path_test = "D:\\Etude technique\\test"
-use_path_model = "D:\\Etude technique\\model.pth"
+use_path_model = "D:\\Etude technique\\model2.pth"
 
 
 def train_model(train_path, verbose=False, show_result=True, epochs=20, batch_size=12):
     df_path_train = load(train_path)
     df_train, df_valid = train_test_split(df_path_train, test_size=0.2)
-    train_set = CustomDataset(df_path_train)
+    df_train, df_valid = df_train.reset_index(), df_valid.reset_index()
+    train_set = CustomDataset(df_train)
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
     val_set = CustomDataset(df_valid)
@@ -172,7 +173,12 @@ def train_model(train_path, verbose=False, show_result=True, epochs=20, batch_si
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    model = CNN().to(device)
+    # Detection number of bands
+    for data in train_loader:
+        x_in, _ = data
+        dim_in = x_in.size()[3]
+        break
+    model = CNN(dim_in).to(device)
     model = model.double()
     optimizer = torch.optim.Adam(model.parameters())
     criterion = nn.BCELoss()
