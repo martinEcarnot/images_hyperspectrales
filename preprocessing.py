@@ -16,6 +16,48 @@ def show_image(img):
     plt.show()
 
 
+def reflectance(image, crop_idx_dim1, thresh_lum_spectralon, verbose=False):
+    """
+    Conversion to reflectance
+    :param image: original image
+    :param crop_idx_dim1: index of the edge of the spectralon
+    :param thresh_lum_spectralon: threshold of light intensity to remove background + milli
+    :param verbose: Display figure if set to True
+    :return: reflectance image
+    """
+    imr = np.empty(image.shape, np.float32)
+
+    # Detect and extract spectralon
+    im0 = image[:, 1:crop_idx_dim1]
+    ret0, binary_image0 = cv.threshold(im0, thresh_lum_spectralon, 1, cv.THRESH_BINARY)
+    binary_image0 = cv.erode(binary_image0, np.ones((10, 10), np.uint8))
+    binary_image0 = cv.morphologyEx(binary_image0, cv.MORPH_CLOSE, np.ones((20, 20), np.uint8))
+
+    # Conversion to reflectance: Essential for shape detection
+    ref = np.zeros((image.shape[0]), image.dtype)
+    for x in range(0, image.shape[0]):
+        nz = binary_image0[x, :] != 0
+        if sum(nz) > 50:
+            ref[x] = np.mean(im0[x, nz], 0)
+            imr[x, :] = image[x, :] / np.tile(ref[x], (image.shape[1]))
+
+    if verbose:
+        fig, axes = plt.subplots(ncols=2, figsize=(9, 3))
+        ax = axes.ravel()
+
+        ax[0].imshow(image, cmap="gray")
+        ax[0].set_title('Original image')
+        ax[1].imshow(imr, cmap="gray")
+        ax[1].set_title('Reflectance image')
+
+        for a in ax:
+            a.set_axis_off()
+
+        fig.tight_layout()
+        plt.show()
+    return imr
+
+
 def preprocessing(folder_path, s_img, crop_idx_dim1=1000, thresh_refl=0.15, thresh_lum_spectralon=22000, band=100,
                   area_range=1000, verbose=1):
     """
@@ -34,29 +76,9 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1000, thresh_refl=0.15, thre
     img = envi.open(folder_path + s_img + '.hdr', folder_path + s_img + '.hyspex')
     img = np.array(img.read_band(band), dtype=np.int16)
     img = np.transpose(img)
-    imr = np.empty(img.shape, np.float32)
-    # show_image(img)
-
-    # Detect and extract spectralon
-    im0 = img[:, 1:crop_idx_dim1]
-    # show_image(im0)
-
-    ret0, binary_image0 = cv.threshold(im0, thresh_lum_spectralon, 1, cv.THRESH_BINARY)
-    # show_image(binary_image0)
-
-    binary_image0 = cv.erode(binary_image0, np.ones((10, 10), np.uint8))
-    binary_image0 = cv.morphologyEx(binary_image0, cv.MORPH_CLOSE, np.ones((20, 20), np.uint8))
-    # show_image(binary_image0)
-
-    # Conversion to reflectance: Essential for shape detection
-    ref = np.zeros((img.shape[0]), img.dtype)
-    for x in range(0, img.shape[0]):
-        nz = binary_image0[x, :] != 0
-        if sum(nz) > 50:
-            ref[x] = np.mean(im0[x, nz], 0)
-            imr[x, :] = img[x, :] / np.tile(ref[x], (img.shape[1]))
-    # show_image(imr)
-
+    # Conversion to reflectance
+    imr = reflectance(img, crop_idx_dim1, thresh_lum_spectralon, verbose=True)
+    exit()
     colmin = 1300  # Reduce image to remove spectralon
 
     # Grain detection and split close grains
@@ -186,28 +208,7 @@ def watershed():
                     "D:\\Etude technique\\var8-x75y12_7000_us_2x_2021-10-20T113607_corr" + '.hyspex')
     img = np.array(img.read_band(100), dtype=np.int16)
     img = np.transpose(img)
-    imr = np.empty(img.shape, np.float32)
-    # show_image(img)
-
-    # Detect and extract spectralon
-    im0 = img[:, 1:1300]
-    # show_image(im0)
-
-    ret0, binary_image0 = cv.threshold(im0, 20000, 1, cv.THRESH_BINARY)
-    # show_image(binary_image0)
-
-    binary_image0 = cv.erode(binary_image0, np.ones((10, 10), np.uint8))
-    binary_image0 = cv.morphologyEx(binary_image0, cv.MORPH_CLOSE, np.ones((20, 20), np.uint8))
-    # show_image(binary_image0)
-
-    # Conversion to reflectance: Essential for shape detection
-    ref = np.zeros((img.shape[0]), img.dtype)
-    for x in range(0, img.shape[0]):
-        nz = binary_image0[x, :] != 0
-        if sum(nz) > 50:
-            ref[x] = np.mean(im0[x, nz], 0)
-            imr[x, :] = img[x, :] / np.tile(ref[x], (img.shape[1]))
-    # show_image(imr)
+    imr = reflectance(img, 1300, 8000)
 
     colmin = 1300  # Reduce image to remove spectralon
 
