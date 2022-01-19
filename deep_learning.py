@@ -129,7 +129,7 @@ class CNN(nn.Module):
 
         x = self.conv4(x)
         x = self.relu(x)
-
+        #
         x = self.flatten(x)
         x = self.linear1(x)
         x = self.dropout(x)
