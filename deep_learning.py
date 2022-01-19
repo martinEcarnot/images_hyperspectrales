@@ -232,7 +232,7 @@ def train_model(train_path, verbose=False, show_result=True, epochs=20, batch_si
 
         print('Epoch %d | Loss %6.2f | Accuracy %6.2f | Val_Loss %6.2f | Val_Accuracy %6.2f' % (
               epoch, sum(losses) / len(losses), corrects / len(train_set), sum(val_losses) / len(val_losses), val_corrects / len(val_set)))
-
+        print(output[0], y[0])
         all_losses.append(sum(losses) / len(losses))
         all_accuracy.append(corrects / len(train_set))
         all_val_losses.append(sum(val_losses) / len(val_losses))
