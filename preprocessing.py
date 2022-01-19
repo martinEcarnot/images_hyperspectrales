@@ -177,3 +177,51 @@ def create_mask(im_bar, array_bbox_bar_res, list_regions_bar):
         list_mask.append(mask)
     return list_mask
 
+
+def watershed():
+    """
+    Function to try watershed algorithm
+    """
+    img = envi.open("D:\\Etude technique\\var8-x75y12_7000_us_2x_2021-10-20T113607_corr" + '.hdr',
+                    "D:\\Etude technique\\var8-x75y12_7000_us_2x_2021-10-20T113607_corr" + '.hyspex')
+    img = np.array(img.read_band(100), dtype=np.int16)
+    img = np.transpose(img)
+    imr = np.empty(img.shape, np.float32)
+    # show_image(img)
+
+    # Detect and extract spectralon
+    im0 = img[:, 1:1300]
+    # show_image(im0)
+
+    ret0, binary_image0 = cv.threshold(im0, 20000, 1, cv.THRESH_BINARY)
+    # show_image(binary_image0)
+
+    binary_image0 = cv.erode(binary_image0, np.ones((10, 10), np.uint8))
+    binary_image0 = cv.morphologyEx(binary_image0, cv.MORPH_CLOSE, np.ones((20, 20), np.uint8))
+    # show_image(binary_image0)
+
+    # Conversion to reflectance: Essential for shape detection
+    ref = np.zeros((img.shape[0]), img.dtype)
+    for x in range(0, img.shape[0]):
+        nz = binary_image0[x, :] != 0
+        if sum(nz) > 50:
+            ref[x] = np.mean(im0[x, nz], 0)
+            imr[x, :] = img[x, :] / np.tile(ref[x], (img.shape[1]))
+    # show_image(imr)
+
+    colmin = 1300  # Reduce image to remove spectralon
+
+    # Grain detection and split close grains
+    im1 = imr[:, colmin:]
+    ret, binary_image = cv.threshold(im1, 0.15, 1, cv.THRESH_BINARY)
+    # show_image(binary_image)
+
+    # Watershed part
+
+    # https://scikit-image.org/docs/dev/auto_examples/segmentation/plot_watershed.html
+    # https://docs.opencv.org/4.x/d3/db4/tutorial_py_watershed.html
+    from gala.morpho import watershed
+
+    new_img = watershed(binary_image)
+    plt.imshow(new_img)
+    plt.show()

@@ -75,11 +75,17 @@ def crop_image(path_in, path_out, filename, ext, thresh_lum_spectralon=22000, cr
             envi.save_image(file_name, new_img, force=True)
 
 
-def crop_all_images(use_path):
+def crop_all_images(use_path, band_step_=20, thresh_lum_spectralon_=8000, crop_idx_dim1_=1200,
+                    apply_mask=True, force_creation=True):
     """
     Use of the crop_image function to extract all hyperspectral image at once into a train and test sub-folders
 
     :param use_path: path where all hyperspectral images are stored
+    :param band_step_: step between two wave bands ( if set to 2, takes one out of two bands)
+    :param thresh_lum_spectralon_: threshold of light intensity to remove background, set to 8000 due to darker images
+    :param crop_idx_dim1_: index of the edge of the spectralon
+    :param apply_mask: bool to apply convex mask to the grain in order to keep only the grain, no background
+    :param force_creation: bool, if the file already exist, set to True to force the rewriting
     """
     all_files = next(walk(use_path), (None, None, []))[2]  # Detect only the files, not the folders
     hdr_files = [x for x in all_files if "hdr" in x]  # Extract hdr files
@@ -91,13 +97,11 @@ def crop_all_images(use_path):
         os.makedirs(test_path)
 
     ext = '.hdr'
-    # The two following values can be ask for each hyperspectral image but also parameters of the function
-    # preprocessing such as thresh_refl or area_range.
-    thresh_lum_spectralon_ = 8000  # The threshold is set lower than the original 22000 because some image are darker
-    crop_idx_dim1_ = 1200  # Crop all the spectralon
+    # More values can be ask for each hyperspectral such as thresh_refl or area_range.
     path = os.path.join(use_path, "")
     for file in hdr_files:
         filename = file[:-4]  # Remove extension
         path_out = os.path.join(test_path, filename, "") if "2021" in file else os.path.join(train_path, filename, "")
         crop_image(path, path_out, filename, ext, thresh_lum_spectralon=thresh_lum_spectralon_,
-                   crop_idx_dim1=crop_idx_dim1_, band_step=20, apply_mask=True, force_creation=True)
+                   crop_idx_dim1=crop_idx_dim1_, band_step=band_step_, apply_mask=apply_mask,
+                   force_creation=force_creation)
