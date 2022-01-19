@@ -150,10 +150,14 @@ use_path_train = "E:\\Etude technique\\raw\\train"
 use_path_test = "E:\\Etude technique\\raw\\test"
 use_path_model = "E:\\Etude technique\\model"
 
-def train_model(train_path, verbose=False, epochs=20, batch_size=12):
+def train_model(train_path, val_path, verbose=False, show_result=True, epochs=20, batch_size=12):
     df_path_train = load(train_path)
     train_set = CustomDataset(df_path_train)
-    trainloader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
+    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
+
+    df_path_val = load(val_path)
+    val_set = CustomDataset(df_path_val)
+    val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -161,16 +165,20 @@ def train_model(train_path, verbose=False, epochs=20, batch_size=12):
     model = model.double()
     optimizer = torch.optim.Adam(model.parameters())
     criterion = nn.BCELoss()
+
     if verbose:
         print(model)
 
     all_losses = []
     all_accuracy = []
+    all_val_losses = []
+    all_val_accuracy = []
+
     for epoch in range(epochs):
         model.train()
-        losses, corrects, nbs_0, nbs_1 = [], 0, 0, 0
+        losses, corrects, val_losses, val_corrects = [], 0, [], 0
 
-        for batch_num, input_data in enumerate(trainloader):
+        for batch_num, input_data in enumerate(train_loader):
             optimizer.zero_grad()
             x, y = input_data
             x = x.permute(0, 3, 1, 2) / 64
@@ -186,14 +194,10 @@ def train_model(train_path, verbose=False, epochs=20, batch_size=12):
                     if int(y[k][0].item()) == 1:
                         correct += 1
                         corrects += 1
-                    nb_0 += 1
-                    nbs_0 += 1
                 elif float(output[k][1].item()) >= float(output[k][0].item()):
                     if int(y[k][1].item()) == 1:
                         correct += 1
                         corrects += 1
-                    nb_1 += 1
-                    nbs_1 += 1
                 total += 1
 
             loss = criterion(output, y)
@@ -207,16 +211,40 @@ def train_model(train_path, verbose=False, epochs=20, batch_size=12):
                     print('\tEpoch %d | Batch %d | Loss %6.2f | Accuracy %6.2f' % (
                           epoch, batch_num, loss.item(), correct / total))
 
-        print('Epoch %d | Loss %6.2f | Accuracy %6.2f' % (
-              epoch, sum(losses) / len(losses), corrects / len(train_set)))
+        for batch_num, input_data in enumerate(val_loader):
+            x, y = input_data
+            x = x.permute(0, 3, 1, 2) / 64
+
+            x = x.to(device).double()
+            y = y.to(device).double()
+
+            output = model(x)
+
+            for k in range(len(output)):
+                if float(output[k][0].item()) > float(output[k][1].item()):
+                    if int(y[k][0].item()) == 1:
+                        val_corrects += 1
+                elif float(output[k][1].item()) >= float(output[k][0].item()):
+                    if int(y[k][1].item()) == 1:
+                        val_corrects += 1
+
+            loss = criterion(output, y)
+            val_losses.append(loss.item())
+
+        print('Epoch %d | Loss %6.2f | Accuracy %6.2f | Val_Loss %6.2f | Val_Accuracy %6.2f' % (
+              epoch, sum(losses) / len(losses), corrects / len(train_set), sum(val_losses) / len(val_losses), val_corrects / len(val_set)))
 
         all_losses.append(sum(losses) / len(losses))
         all_accuracy.append(corrects / len(train_set))
+        all_val_losses.append(sum(val_losses) / len(val_losses))
+        all_val_accuracy.append(val_corrects / len(val_set))
 
-    if verbose:
-        plt.plot(range(len(all_losses)), all_losses)
+    if show_result:
+        plt.plot(range(len(all_val_losses)), all_val_losses)
+        plt.plot(range(len(all_val_losses)), all_val_losses)
         plt.show()
-        plt.plot(range(len(all_accuracy)), all_accuracy)
+        plt.plot(range(len(all_val_accuracy)), all_val_accuracy)
+        plt.plot(range(len(all_val_accuracy)), all_val_accuracy)
         plt.show()
 
     return model
@@ -263,7 +291,7 @@ def load_model(load_path):
     model_ = torch.load(load_path)
     return model_
 
-model = train_model(use_path_train)
+model = train_model(use_path_train, use_path_test)
 test_model(model, use_path_test)
 
 save_model(model, use_path_model)
