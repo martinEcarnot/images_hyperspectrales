@@ -1,6 +1,5 @@
 # Global import
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import os
 from os import walk
@@ -8,6 +7,7 @@ import spectral as sp
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
+from sklearn.model_selection import train_test_split
 
 
 def load(use_path):
@@ -34,6 +34,7 @@ def load(use_path):
         data = pd.DataFrame(list(zip(list_img, list_hdr, list_class)), columns=["img", "hdr", "class"])
         dataframe = pd.concat([dataframe, data], ignore_index=True)
     return dataframe
+
 
 class CustomDataset(Dataset):
     """
@@ -70,6 +71,7 @@ class CustomDataset(Dataset):
         img_tensor = torch.tensor(img[:, :, :])
 
         return img_tensor, label
+
 
 class CNN(nn.Module):
 
@@ -149,17 +151,23 @@ class CNN(nn.Module):
         x = self.softmax(x)
         return x
 
-use_path_train = "E:\\Etude technique\\raw\\train"
-use_path_test = "E:\\Etude technique\\raw\\test"
-use_path_model = "E:\\Etude technique\\model"
+# use_path_train = "E:\\Etude technique\\raw\\train"
+# use_path_test = "E:\\Etude technique\\raw\\test"
+# use_path_model = "E:\\Etude technique\\model"
 
-def train_model(train_path, val_path, verbose=False, show_result=True, epochs=20, batch_size=12):
+
+use_path_train = "D:\\Etude technique\\train"
+use_path_test = "D:\\Etude technique\\test"
+use_path_model = "D:\\Etude technique\\model.pth"
+
+
+def train_model(train_path, verbose=False, show_result=True, epochs=20, batch_size=12):
     df_path_train = load(train_path)
+    df_train, df_valid = train_test_split(df_path_train, test_size=0.2)
     train_set = CustomDataset(df_path_train)
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
-    df_path_val = load(val_path)
-    val_set = CustomDataset(df_path_val)
+    val_set = CustomDataset(df_valid)
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -252,6 +260,7 @@ def train_model(train_path, val_path, verbose=False, show_result=True, epochs=20
 
     return model
 
+
 def test_model(model_, test_path, verbose=False, batch_size=12):
     df_path_test = load(test_path)
     test_set = CustomDataset(df_path_test)
@@ -287,15 +296,17 @@ def test_model(model_, test_path, verbose=False, batch_size=12):
 
     print('Test Accuracy %6.2f' % (corrects / totals))
 
+
 def save_model(model_, save_path):
     torch.save(model_, save_path)
+
 
 def load_model(load_path):
     model_ = torch.load(load_path)
     return model_
 
-model = train_model(use_path_train, use_path_test)
-test_model(model, use_path_test)
-
-save_model(model, use_path_model)
-print('Done')
+# model = train_model(use_path_train, use_path_test)
+# test_model(model, use_path_test)
+#
+# save_model(model, use_path_model)
+# print('Done')
