@@ -122,7 +122,7 @@ class CNN(nn.Module):
         # print("x.shape 3: ", x.shape)
         x = self.pool3(x)
         # print("x.shape 3: ", x.shape)
-
+        #
         x = self.conv4(x)
         x = self.relu(x)
         # print("x.shape 4: ", x.shape)
