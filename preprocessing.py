@@ -1,9 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2 as cv
+import spectral as sp
 import spectral.io.envi as envi
 from skimage.measure import label, regionprops
 import matplotlib.patches as patches
+from brightest_band import brightest_band
 
 
 def show_image(img):
@@ -58,7 +60,7 @@ def reflectance(image, crop_idx_dim1, thresh_lum_spectralon, verbose=False):
     return imr
 
 
-def preprocessing(folder_path, s_img, crop_idx_dim1=1000, thresh_refl=0.15, thresh_lum_spectralon=22000, band=100,
+def preprocessing(folder_path, s_img, crop_idx_dim1=1000, thresh_refl=0.15, thresh_lum_spectralon=22000,
                   area_range=1000, verbose=1):
     """
     Take an image and create sub-images for each grain
@@ -68,17 +70,19 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1000, thresh_refl=0.15, thre
     :param crop_idx_dim1: index of the edge of the spectralon
     :param thresh_refl: threshold of reflectance to remove background
     :param thresh_lum_spectralon: threshold of light intensity to remove background + milli
-    :param band: spectral band to extract (#100 : 681 nm)
     :param area_range: minimum area to be considered, in pixels
     :param verbose: display the image with bbox
     :return: array of bbox of all grains, list of masks for all grains
     """
-    img = envi.open(folder_path + s_img + '.hdr', folder_path + s_img + '.hyspex')
+    img = sp.open_image(folder_path + s_img + '.hdr')
+    band = brightest_band(img)  # Automatically detect the best band to do extraction
+
     img = np.array(img.read_band(band), dtype=np.int16)
+
     img = np.transpose(img)
     # Conversion to reflectance
-    imr = reflectance(img, crop_idx_dim1, thresh_lum_spectralon, verbose=True)
-    exit()
+    imr = reflectance(img, crop_idx_dim1, thresh_lum_spectralon, verbose=False)
+
     colmin = 1300  # Reduce image to remove spectralon
 
     # Grain detection and split close grains

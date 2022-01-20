@@ -48,11 +48,16 @@ def crop_image(path_in, path_out, filename, ext, thresh_lum_spectralon=22000, cr
         max_width = 180
 
         img = sp.open_image(path_in + filename + ext)
+
         # Loop over all bbox detected with a smart progress meter (tqdm)
         for k in tqdm(range(len(arr_bbox))):
 
             box = arr_bbox[k]
+
             grain_img = img[box[1]:box[3], box[0]:box[2]]
+            # Function built in the spectral library but as fast as the previous method
+            # grain_img = np.array(img.read_subregion((box[1], box[3]), (box[0], box[2]), bands=None))
+
             w, h = grain_img.shape[0], grain_img.shape[1]
 
             # Set the grain in the middle of the image
