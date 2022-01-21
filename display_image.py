@@ -47,7 +47,9 @@ def display_img(path_in, filename):
     # Rotate the image by 90 degree
     img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
 
-    print(int(time.time() - a))
+    s = int(time.time() - a)
+    t = str(s // 60) + ' min ' + str(s % 60) + ' sec'
+    print(t)
     # Display the image
     plt.axis('off')
     plt.imshow(img)
