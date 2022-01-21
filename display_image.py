@@ -12,7 +12,7 @@ def band_brigthness(img, k):
 
     :param img: the spectral image (only hdr)
     :param k: the band index
-    :return: the index of the brightest band
+    :return: the mean brightness of the band k
     """
     rows = [i for i in range(100)]
     cols = [i for i in range(150, img.shape[1])]
@@ -31,6 +31,7 @@ def display_img(path_in, filename):
     :param path_in: path containing the image file
     :param filename: name of the image file
     '''
+    a = time.time()
 
     img = sp.open_image(path_in + filename + '.hdr')
 
@@ -46,6 +47,7 @@ def display_img(path_in, filename):
     # Rotate the image by 90 degree
     img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
 
+    print(int(time.time() - a))
     # Display the image
     plt.axis('off')
     plt.imshow(img)
@@ -55,7 +57,8 @@ PATH = "E:\\Etude technique\\raw\\"
 #PATH = "D:/Etude technique/"
 file = 'var8-x75y12_7000_us_2x_2021-10-20T113607_corr'
 file = 'var1-x73y14_7000_us_2x_2021-10-23T151946_corr'
+file = 'x30y21-var1_11000_us_2x_2020-12-02T095609_corr'
+file = 'x32y23-var8_8000_us_2x_2020-12-02T155853_corr'
 
-a = time.time()
 display_img(PATH, file)
-print(int(time.time() - a))
+
