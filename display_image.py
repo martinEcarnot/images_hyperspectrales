@@ -2,8 +2,8 @@ import cv2
 import matplotlib.pyplot as plt
 import spectral as sp
 import numpy as np
-import torch
 import time
+
 
 def band_brigthness(img, k):
     """
@@ -22,15 +22,16 @@ def band_brigthness(img, k):
 
     return mean
 
+
 def display_img(path_in, filename):
-    '''
+    """
     Display a hyperspectral image as an RGB image
     R : 460 nm -> band n°22
     G : 540 nm -> band n°53
     B : 640 nm -> band n°89
     :param path_in: path containing the image file
     :param filename: name of the image file
-    '''
+    """
     a = time.time()
 
     img = sp.open_image(path_in + filename + '.hdr')
@@ -55,12 +56,13 @@ def display_img(path_in, filename):
     plt.imshow(img)
     plt.show()
 
-PATH = "E:\\Etude technique\\raw\\"
-#PATH = "D:/Etude technique/"
+
+# PATH = "E:\\Etude technique\\raw\\"
+PATH = "D:\\Etude technique\\"
 file = 'var8-x75y12_7000_us_2x_2021-10-20T113607_corr'
-file = 'var1-x73y14_7000_us_2x_2021-10-23T151946_corr'
-file = 'x30y21-var1_11000_us_2x_2020-12-02T095609_corr'
-file = 'x32y23-var8_8000_us_2x_2020-12-02T155853_corr'
+# file = 'var1-x73y14_7000_us_2x_2021-10-23T151946_corr'
+# file = 'x30y21-var1_11000_us_2x_2020-12-02T095609_corr'
+# file = 'x32y23-var8_8000_us_2x_2020-12-02T155853_corr'
 
 display_img(PATH, file)
 

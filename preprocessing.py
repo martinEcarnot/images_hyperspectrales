@@ -6,6 +6,7 @@ import spectral.io.envi as envi
 from skimage.measure import label, regionprops
 import matplotlib.patches as patches
 from brightest_band import brightest_band
+from tqdm import tqdm
 
 
 def show_image(img):
@@ -37,7 +38,7 @@ def reflectance(image, crop_idx_dim1, thresh_lum_spectralon, verbose=False):
 
     # Conversion to reflectance: Essential for shape detection
     ref = np.zeros((image.shape[0]), image.dtype)
-    for x in range(0, image.shape[0]):
+    for x in range(image.shape[0]):
         nz = binary_image0[x, :] != 0
         if sum(nz) > 50:
             ref[x] = np.mean(im0[x, nz], 0)
@@ -73,14 +74,16 @@ def reflectance_grain(image, crop_idx_dim1, band_step):
     cols = [i for i in range(image.shape[1])]
     n_bands = 216 // band_step
     bands = [j * band_step for j in range(n_bands)]
+    print("Loading spectralon of each band...")
     spectralon_3d = np.array(image.read_subimage(rows, cols, bands))  # Extract spectralon for each band
+    print("...Done")
 
     # Determination of the threshold to take
     spec_thresh = spectralon_3d[:150, :, :]
     mean_thresh = np.mean(spec_thresh, axis=(0, 1))
 
     ref = np.zeros((image.shape[1], n_bands), image.dtype)
-    for band in range(n_bands):
+    for band in tqdm(range(n_bands), desc="Retrieving luminance values"):
 
         thresh_lum_spectralon = mean_thresh[band] * 0.8  # Take 80% of the value as the threshold
         ret0, binary_image0 = cv.threshold(spectralon_3d[:, :, band], thresh_lum_spectralon, 1, cv.THRESH_BINARY)
@@ -118,7 +121,7 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1300, thresh_refl=0.15, area
     # print('band: ', band, 'Value: ', max_ref)
     thresh_lum_spectralon = max_ref * 0.8
 
-    img = np.array(img.read_band(band), dtype=np.int16)
+    img = np.array(img.read_band(band), dtype=np.float64)
 
     img = np.transpose(img)
     # Conversion to reflectance

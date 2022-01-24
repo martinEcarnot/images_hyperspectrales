@@ -43,8 +43,8 @@ def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
         # max_width = max(all_widths)
 
         # Static max for the neural network to work
-        max_height = 180
-        max_width = 180
+        max_height = 200
+        max_width = 200
 
         img = sp.open_image(path_in + filename + ext)
 
@@ -55,7 +55,7 @@ def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
         array_ref = reflectance_grain(img, crop_idx_dim1-350, band_step)  # -350 to remove graph paper
 
         # Loop over all bbox detected with a smart progress meter (tqdm)
-        for k in tqdm(range(len(arr_bbox))):
+        for k in tqdm(range(len(arr_bbox)), desc="Creating images"):
 
             box = arr_bbox[k]
 
