@@ -53,7 +53,6 @@ def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
 
         # Retrieve values to convert grain image to reflectance
         array_ref = reflectance_grain(img, crop_idx_dim1-350, band_step)  # -350 to remove graph paper
-        print(array_ref.shape)
 
         # Loop over all bbox detected with a smart progress meter (tqdm)
         for k in tqdm(range(len(arr_bbox))):
@@ -103,17 +102,30 @@ def crop_all_images(use_path, band_step_=20, crop_idx_dim1_=1300, apply_mask=Tru
     all_files = next(walk(use_path), (None, None, []))[2]  # Detect only the files, not the folders
     hdr_files = [x for x in all_files if "hdr" in x]  # Extract hdr files
     train_path = os.path.join(use_path, "train")
+    valid_path = os.path.join(use_path, "valid")
     test_path = os.path.join(use_path, "test")
     if not os.path.exists(train_path):  # Creation train folder
         os.makedirs(train_path)
+    if not os.path.exists(valid_path):  # Creation validation folder
+        os.makedirs(valid_path)
     if not os.path.exists(test_path):  # Creation test folder
         os.makedirs(test_path)
 
     ext = '.hdr'
-    # More values can be ask for each hyperspectral such as thresh_refl or area_range.
+
     path = os.path.join(use_path, "")
+    list_var_valid = []
     for file in hdr_files:
         filename = file[:-4]  # Remove extension
-        path_out = os.path.join(test_path, filename, "") if "2021" in file else os.path.join(train_path, filename, "")
+        if "2021" in file:
+            var = file.split("var", 1)[1][0]
+            if var not in list_var_valid:
+                list_var_valid.append(var)
+                path_out = os.path.join(valid_path, filename, "")
+            else:
+                path_out = os.path.join(test_path, filename, "")
+        else:
+            path_out = os.path.join(train_path, filename, "")
+
         crop_image(path, path_out, filename, ext, crop_idx_dim1=crop_idx_dim1_, band_step=band_step_,
                    apply_mask=apply_mask, force_creation=force_creation)
