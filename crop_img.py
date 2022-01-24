@@ -2,14 +2,14 @@ import cv2
 import spectral as sp
 import spectral.io.envi as envi
 import numpy as np
-from preprocessing import preprocessing
+from preprocessing import preprocessing, reflectance_grain, show_image
 from tqdm import tqdm
 import os
 from os import walk
 
 
-def crop_image(path_in, path_out, filename, ext, thresh_lum_spectralon=22000, crop_idx_dim1=1000,
-               band_step=1, apply_mask=False, force_creation=False):
+def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
+               band_step=20, apply_mask=False, force_creation=False):
     """
     Given an hyperspectral image, use the function preprocessing from preprocessing.py to retrieve bbox coordinates,
     extract the hyperspectral image for each grain and save it in a particular folder.
@@ -18,8 +18,7 @@ def crop_image(path_in, path_out, filename, ext, thresh_lum_spectralon=22000, cr
     :param path_out: path of the folder to save grain images (ex: path_in + filename + '/')
     :param filename: name of the image to work with (ex: 'var8-x75y12_7000_us_2x_2021-10-20T113607_corr')
     :param ext: extension ('hdr' here)
-    :param thresh_lum_spectralon: threshold of light intensity to remove background + milli
-    :param crop_idx_dim1: index of the edge of the spectralon
+    :param crop_idx_dim1: index of the edge of the graph paper
     :param band_step: step between two wave bands ( if set to 2, takes one out of two bands)
     :param apply_mask: bool to apply convex mask to the grain in order to keep only the grain, no background
     :param force_creation: bool, if the file already exist, set to True to force the rewriting
@@ -29,10 +28,10 @@ def crop_image(path_in, path_out, filename, ext, thresh_lum_spectralon=22000, cr
     if not os.path.exists(path_out):
         os.makedirs(path_out)
         bool_file = 1
+
     # By default, if the folder already exists, nothing is done
     if bool_file or force_creation:
-        arr_bbox, masks = preprocessing(path_in, filename, thresh_lum_spectralon=thresh_lum_spectralon,
-                                        crop_idx_dim1=crop_idx_dim1)
+        arr_bbox, masks = preprocessing(path_in, filename, crop_idx_dim1=crop_idx_dim1)
         # all_heights = []
         # all_widths = []
         # for k in range(len(arr_bbox)):
@@ -49,12 +48,19 @@ def crop_image(path_in, path_out, filename, ext, thresh_lum_spectralon=22000, cr
 
         img = sp.open_image(path_in + filename + ext)
 
+        # The number of band is considered as a static number, 216
+        n_bands = 216 // band_step
+
+        # Retrieve values to convert grain image to reflectance
+        array_ref = reflectance_grain(img, crop_idx_dim1-350, band_step)  # -350 to remove graph paper
+        print(array_ref.shape)
+
         # Loop over all bbox detected with a smart progress meter (tqdm)
         for k in tqdm(range(len(arr_bbox))):
 
             box = arr_bbox[k]
 
-            grain_img = img[box[1]:box[3], box[0]:box[2]]
+            grain_img = img[box[1]:box[3], box[0]:box[2]].astype('float64')
             # Function built in the spectral library but as fast as the previous method
             # grain_img = np.array(img.read_subregion((box[1], box[3]), (box[0], box[2]), bands=None))
 
@@ -64,12 +70,16 @@ def crop_image(path_in, path_out, filename, ext, thresh_lum_spectralon=22000, cr
             x1, y1 = (max_width - w) // 2, (max_height - h) // 2
             x2, y2 = x1 + w, y1 + h
 
-            # The number of band is considered as a static number, 216
-            n_bands = 216 // band_step
             new_img = np.zeros((max_width, max_height, n_bands))
+
+            edge = box[0]  # Coordinate of the column in the original image
 
             for j in range(n_bands):
                 new_grain = grain_img[:, :, j * band_step]
+                # Reflectance
+                for x in range(0, h):
+                    lum = array_ref[x+edge, j]
+                    new_grain[:, x] = new_grain[:, x] / lum if lum != 0 else [0] * w
                 if apply_mask:
                     dst = cv2.bitwise_and(new_grain, new_grain, mask=np.array(masks[k]).transpose())
                     new_img[x1:x2, y1:y2, j] = dst
@@ -80,15 +90,13 @@ def crop_image(path_in, path_out, filename, ext, thresh_lum_spectralon=22000, cr
             envi.save_image(file_name, new_img, force=True)
 
 
-def crop_all_images(use_path, band_step_=20, thresh_lum_spectralon_=8000, crop_idx_dim1_=1200,
-                    apply_mask=True, force_creation=True):
+def crop_all_images(use_path, band_step_=20, crop_idx_dim1_=1300, apply_mask=True, force_creation=True):
     """
     Use of the crop_image function to extract all hyperspectral image at once into a train and test sub-folders
 
     :param use_path: path where all hyperspectral images are stored
     :param band_step_: step between two wave bands ( if set to 2, takes one out of two bands)
-    :param thresh_lum_spectralon_: threshold of light intensity to remove background, set to 8000 due to darker images
-    :param crop_idx_dim1_: index of the edge of the spectralon
+    :param crop_idx_dim1_: index of the edge of the graph paper
     :param apply_mask: bool to apply convex mask to the grain in order to keep only the grain, no background
     :param force_creation: bool, if the file already exist, set to True to force the rewriting
     """
@@ -107,6 +115,5 @@ def crop_all_images(use_path, band_step_=20, thresh_lum_spectralon_=8000, crop_i
     for file in hdr_files:
         filename = file[:-4]  # Remove extension
         path_out = os.path.join(test_path, filename, "") if "2021" in file else os.path.join(train_path, filename, "")
-        crop_image(path, path_out, filename, ext, thresh_lum_spectralon=thresh_lum_spectralon_,
-                   crop_idx_dim1=crop_idx_dim1_, band_step=band_step_, apply_mask=apply_mask,
-                   force_creation=force_creation)
+        crop_image(path, path_out, filename, ext, crop_idx_dim1=crop_idx_dim1_, band_step=band_step_,
+                   apply_mask=apply_mask, force_creation=force_creation)

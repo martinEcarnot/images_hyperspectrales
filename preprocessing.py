@@ -21,7 +21,7 @@ def show_image(img):
 def reflectance(image, crop_idx_dim1, thresh_lum_spectralon, verbose=False):
     """
     Conversion to reflectance
-    :param image: original image
+    :param image: original image (1 band)
     :param crop_idx_dim1: index of the edge of the spectralon
     :param thresh_lum_spectralon: threshold of light intensity to remove background + milli
     :param verbose: Display figure if set to True
@@ -41,7 +41,7 @@ def reflectance(image, crop_idx_dim1, thresh_lum_spectralon, verbose=False):
         nz = binary_image0[x, :] != 0
         if sum(nz) > 50:
             ref[x] = np.mean(im0[x, nz], 0)
-            imr[x, :] = image[x, :] / np.tile(ref[x], (image.shape[1]))
+            imr[x, :] = image[x, :] / ref[x]
 
     if verbose:
         fig, axes = plt.subplots(ncols=2, figsize=(9, 3))
@@ -60,33 +60,72 @@ def reflectance(image, crop_idx_dim1, thresh_lum_spectralon, verbose=False):
     return imr
 
 
-def preprocessing(folder_path, s_img, crop_idx_dim1=1000, thresh_refl=0.15, thresh_lum_spectralon=22000,
-                  area_range=1000, verbose=1):
+def reflectance_grain(image, crop_idx_dim1, band_step):
+    """
+    Conversion to reflectance
+    :param image: the spectral image (only hdr)
+    :param crop_idx_dim1: index of the edge of the spectralon
+    :param band_step: step between two wave bands
+    :return: reflectance array for each band for each column
+    """
+
+    rows = [i for i in range(crop_idx_dim1)]
+    cols = [i for i in range(image.shape[1])]
+    n_bands = 216 // band_step
+    bands = [j * band_step for j in range(n_bands)]
+    spectralon_3d = np.array(image.read_subimage(rows, cols, bands))  # Extract spectralon for each band
+
+    # Determination of the threshold to take
+    spec_thresh = spectralon_3d[:150, :, :]
+    mean_thresh = np.mean(spec_thresh, axis=(0, 1))
+
+    ref = np.zeros((image.shape[1], n_bands), image.dtype)
+    for band in range(n_bands):
+
+        thresh_lum_spectralon = mean_thresh[band] * 0.8  # Take 80% of the value as the threshold
+        ret0, binary_image0 = cv.threshold(spectralon_3d[:, :, band], thresh_lum_spectralon, 1, cv.THRESH_BINARY)
+        binary_image0 = cv.erode(binary_image0, np.ones((10, 10), np.uint8))
+        binary_image0 = cv.morphologyEx(binary_image0, cv.MORPH_CLOSE, np.ones((20, 20), np.uint8))
+
+        # show_image(binary_image0)
+
+        # Conversion to reflectance
+        for x in range(0, image.shape[1]):
+            nz = binary_image0[:, x] != 0
+            if sum(nz) > 50:
+                ref[x, band] = np.mean(spectralon_3d[nz, x, band], 0)
+
+    return ref
+
+
+def preprocessing(folder_path, s_img, crop_idx_dim1=1300, thresh_refl=0.15, area_range=1000, verbose=True):
     """
     Take an image and create sub-images for each grain
 
     :param folder_path: PATH of hyperspectral images
     :param s_img: name of a hyperspectral image
-    :param crop_idx_dim1: index of the edge of the spectralon
+    :param crop_idx_dim1: index of the edge of the graph paper
     :param thresh_refl: threshold of reflectance to remove background
-    :param thresh_lum_spectralon: threshold of light intensity to remove background + milli
     :param area_range: minimum area to be considered, in pixels
     :param verbose: display the image with bbox
     :return: array of bbox of all grains, list of masks for all grains
     """
     img = sp.open_image(folder_path + s_img + '.hdr')
-    band = brightest_band(img)  # Automatically detect the best band to do extraction
+
+    # Automatically detect the best band to do extraction where luminance is the highest
+    band, max_ref = brightest_band(img)
+    # band, max_ref = 105, 29473
+    # print('band: ', band, 'Value: ', max_ref)
+    thresh_lum_spectralon = max_ref * 0.8
 
     img = np.array(img.read_band(band), dtype=np.int16)
 
     img = np.transpose(img)
     # Conversion to reflectance
-    imr = reflectance(img, crop_idx_dim1, thresh_lum_spectralon, verbose=False)
-
-    colmin = 1300  # Reduce image to remove spectralon
+    imr = reflectance(img, crop_idx_dim1-350, thresh_lum_spectralon, verbose=verbose)
 
     # Grain detection and split close grains
-    im1 = imr[:, colmin:]
+    im1 = imr[:, crop_idx_dim1:]
     ret, binary_image = cv.threshold(im1, thresh_refl, 1, cv.THRESH_BINARY)
     # show_image(binary_image)
 
@@ -111,8 +150,8 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1000, thresh_refl=0.15, thre
     # With the bbox of groups of grains, the image is retrieved for each one, then labeled and region properties are
     # determined. The aim is to separate grain but to retrieve only useful pixels, not overlapping areas.
     for ind in range(len(list_bbox_bar)):
-        im_bar = imr[list_bbox_bar[ind][0]:list_bbox_bar[ind][2],
-                     list_bbox_bar[ind][1] + colmin:list_bbox_bar[ind][3] + colmin]  # Select the image inside the bbox
+        im_bar = imr[list_bbox_bar[ind][0]:list_bbox_bar[ind][2], list_bbox_bar[ind][1] +
+                     crop_idx_dim1:list_bbox_bar[ind][3] + crop_idx_dim1]  # Select the image inside the bbox
         ret_bar, binary_image_bar = cv.threshold(im_bar, thresh_refl + 0.1, 1, cv.THRESH_BINARY)  # Higher threshold
         labeled_array_bar = label(binary_image_bar)
         regions_bar = regionprops(labeled_array_bar)
@@ -140,8 +179,8 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1000, thresh_refl=0.15, thre
 
     # Add colmin to y values
     for i in range(len(array_bbox)):
-        array_bbox[i][1] = array_bbox[i][1] + colmin
-        array_bbox[i][3] = array_bbox[i][3] + colmin
+        array_bbox[i][1] = array_bbox[i][1] + crop_idx_dim1
+        array_bbox[i][3] = array_bbox[i][3] + crop_idx_dim1
 
     # Display
     if verbose:
