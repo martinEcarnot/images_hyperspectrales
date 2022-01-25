@@ -107,6 +107,7 @@ class CNN(nn.Module):
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, input_data):
+        # input_data *= 100
         x = self.relu(self.conv1_0(input_data))
         x = self.pool(self.relu(self.conv1_1(x)))
         # print("x.shape 1: ", x.shape)
@@ -118,6 +119,7 @@ class CNN(nn.Module):
         #
         x = self.relu(self.conv4_1(x))
         x = self.pool(self.relu(self.conv4_2(x)))
+        x = self.pool(x)
         # print("x.shape 4: ", x.shape)
         # exit()
 
@@ -131,6 +133,7 @@ class CNN(nn.Module):
         return x
 
 use_path_train = "E:\\Etude technique\\raw\\train"
+use_path_val = "E:\\Etude technique\\raw\\valid"
 use_path_test = "E:\\Etude technique\\raw\\test"
 use_path_model = "E:\\Etude technique\\model.pth"
 
@@ -139,16 +142,18 @@ use_path_model = "E:\\Etude technique\\model.pth"
 # use_path_model = "D:\\Etude technique\\model.pth"
 
 
-def train_model(train_path, verbose=False, show_result=True, epochs=20, batch_size=12):
+def train_model(train_path, val_path, verbose=False, show_result=True, epochs=20, batch_size=12):
     print('training model')
     df_path_train = load(train_path)
-    df_train, df_valid = train_test_split(df_path_train, test_size=0.2)
-    df_train, df_valid = df_train.reset_index(), df_valid.reset_index()
+    df_path_val = load(val_path)
+
+    # df_train, df_valid = train_test_split(df_path_train, test_size=0.2)
+    # df_train, df_valid = df_train.reset_index(), df_valid.reset_index()
 
     train_set = CustomDataset(df_path_train)
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
-    val_set = CustomDataset(df_valid)
+    val_set = CustomDataset(df_path_val)
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -161,7 +166,7 @@ def train_model(train_path, verbose=False, show_result=True, epochs=20, batch_si
 
     model = CNN(dim_in).to(device)
     model = model.double()
-    optimizer = torch.optim.Adam(model.parameters())
+    optimizer = torch.optim.Adam(model.parameters())#, lr=0.001)
     criterion = nn.BCELoss()
 
     if verbose:
@@ -179,13 +184,13 @@ def train_model(train_path, verbose=False, show_result=True, epochs=20, batch_si
         for batch_num, input_data in enumerate(train_loader):
             optimizer.zero_grad()
             x, y = input_data
-            x = x.permute(0, 3, 1, 2) / 64
+            x = x.permute(0, 3, 1, 2) * 64
 
             x = x.to(device).double()
             y = y.to(device).double()
 
             output = model(x)
-            correct, total, nb_0, nb_1 = 0, 0, 0, 0
+            correct = 0
 
             for k in range(len(output)):
                 if float(output[k][0].item()) > float(output[k][1].item()):
@@ -196,7 +201,6 @@ def train_model(train_path, verbose=False, show_result=True, epochs=20, batch_si
                     if int(y[k][1].item()) == 1:
                         correct += 1
                         corrects += 1
-                total += 1
 
             loss = criterion(output, y)
             loss.backward()
@@ -205,14 +209,14 @@ def train_model(train_path, verbose=False, show_result=True, epochs=20, batch_si
             optimizer.step()
 
             if verbose:
-                if batch_num % 5 == 0:
+                if batch_num % 10 == 0:
                     print('\tEpoch %d | Batch %d | Loss %6.2f | Accuracy %6.2f' % (
-                          epoch, batch_num, loss.item(), correct / total))
+                          epoch, batch_num, loss.item(), correct / batch_size))
 
         model.eval()
         for batch_num, input_data in enumerate(val_loader):
             x, y = input_data
-            x = x.permute(0, 3, 1, 2) / 64
+            x = x.permute(0, 3, 1, 2) * 64
 
             x = x.to(device).double()
             y = y.to(device).double()
@@ -237,12 +241,13 @@ def train_model(train_path, verbose=False, show_result=True, epochs=20, batch_si
         all_accuracy.append(corrects / len(train_set))
         all_val_losses.append(sum(val_losses) / len(val_losses))
         all_val_accuracy.append(val_corrects / len(val_set))
+        save_model(model, use_path_model)
 
     if show_result:
-        plt.plot(range(len(all_val_losses)), all_val_losses)
+        plt.plot(range(len(all_losses)), all_losses)
         plt.plot(range(len(all_val_losses)), all_val_losses)
         plt.show()
-        plt.plot(range(len(all_val_accuracy)), all_val_accuracy)
+        plt.plot(range(len(all_accuracy)), all_accuracy)
         plt.plot(range(len(all_val_accuracy)), all_val_accuracy)
         plt.show()
 
@@ -261,7 +266,7 @@ def test_model(model_, test_path, verbose=False, batch_size=12):
 
     for batch_num, input_data in enumerate(testloader):
         x, y = input_data
-        x = x.permute(0, 3, 1, 2) / 64
+        x = x.permute(0, 3, 1, 2) * 64
 
         x = x.to(device).double()
         y = y.to(device).double()
@@ -293,8 +298,9 @@ def load_model(load_path):
     model_ = torch.load(load_path)
     return model_
 
-model = train_model(use_path_train)
-test_model(model, use_path_test)
-
+model = train_model(use_path_train, use_path_val, verbose=True, epochs=50)
 save_model(model, use_path_model)
+
+# model = load_model(use_path_model)
+test_model(model, use_path_test)
 print('Done')
