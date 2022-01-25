@@ -116,6 +116,7 @@ def crop_all_images(use_path, band_step_=20, crop_idx_dim1_=1300, apply_mask=Tru
     path = os.path.join(use_path, "")
     list_var_valid = []
     for file in hdr_files:
+        print("\nNew file\n")
         filename = file[:-4]  # Remove extension
         if "2021" in file:
             var = file.split("var", 1)[1][0]

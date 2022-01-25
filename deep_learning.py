@@ -7,7 +7,6 @@ import spectral as sp
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
-from sklearn.model_selection import train_test_split
 
 
 def load(use_path):
@@ -100,7 +99,7 @@ class CNN(nn.Module):
         self.relu = nn.ReLU()
         self.tanh = nn.Tanh()
         self.flatten = nn.Flatten()
-        self.linear1 = nn.Linear(1*1*320, 30)
+        self.linear1 = nn.Linear(2*2*320, 30)
         self.dropout = nn.Dropout(0.2)
         # self.linear2 = nn.Linear(20, 20)
         self.linear3 = nn.Linear(30, 2)
@@ -130,25 +129,26 @@ class CNN(nn.Module):
         x = self.softmax(x)
         return x
 
-use_path_train = "E:\\Etude technique\\raw\\train"
-use_path_test = "E:\\Etude technique\\raw\\test"
-use_path_model = "E:\\Etude technique\\model.pth"
-
-# use_path_train = "D:\\Etude technique\\train"
-# use_path_test = "D:\\Etude technique\\test"
-# use_path_model = "D:\\Etude technique\\model.pth"
+# use_path_train = "E:\\Etude technique\\raw\\train"
+# use_path_test = "E:\\Etude technique\\raw\\test"
+# use_path_model = "E:\\Etude technique\\model.pth"
 
 
-def train_model(train_path, verbose=False, show_result=True, epochs=20, batch_size=12):
+use_path_train = "D:\\Etude technique\\train"
+use_path_test = "D:\\Etude technique\\test"
+use_path_valid = "D:\\Etude technique\\valid"
+use_path_model = "D:\\Etude technique\\model.pth"
+
+
+def train_model(train_path, valid_path, verbose=False, show_result=True, epochs=20, batch_size=12):
     print('training model')
-    df_path_train = load(train_path)
-    df_train, df_valid = train_test_split(df_path_train, test_size=0.2)
-    df_train, df_valid = df_train.reset_index(), df_valid.reset_index()
 
+    df_path_train = load(train_path)
     train_set = CustomDataset(df_path_train)
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
-    val_set = CustomDataset(df_valid)
+    df_path_valid = load(valid_path)
+    val_set = CustomDataset(df_path_valid)
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -175,11 +175,13 @@ def train_model(train_path, verbose=False, show_result=True, epochs=20, batch_si
     for epoch in range(epochs):
         model.train()
         losses, corrects, val_losses, val_corrects = [], 0, [], 0
+        nb_class_1 = 0
+        nb_class_2 = 0
 
         for batch_num, input_data in enumerate(train_loader):
             optimizer.zero_grad()
             x, y = input_data
-            x = x.permute(0, 3, 1, 2) / 64
+            x = x.permute(0, 3, 1, 2)  # / 64
 
             x = x.to(device).double()
             y = y.to(device).double()
@@ -189,10 +191,12 @@ def train_model(train_path, verbose=False, show_result=True, epochs=20, batch_si
 
             for k in range(len(output)):
                 if float(output[k][0].item()) > float(output[k][1].item()):
+                    nb_class_1 += 1
                     if int(y[k][0].item()) == 1:
                         correct += 1
                         corrects += 1
                 elif float(output[k][1].item()) >= float(output[k][0].item()):
+                    nb_class_2 += 1
                     if int(y[k][1].item()) == 1:
                         correct += 1
                         corrects += 1
@@ -208,11 +212,11 @@ def train_model(train_path, verbose=False, show_result=True, epochs=20, batch_si
                 if batch_num % 5 == 0:
                     print('\tEpoch %d | Batch %d | Loss %6.2f | Accuracy %6.2f' % (
                           epoch, batch_num, loss.item(), correct / total))
-
+        print(f"Class 1: {nb_class_1}, Class 2: {nb_class_2}")
         model.eval()
         for batch_num, input_data in enumerate(val_loader):
             x, y = input_data
-            x = x.permute(0, 3, 1, 2) / 64
+            x = x.permute(0, 3, 1, 2)  # / 64
 
             x = x.to(device).double()
             y = y.to(device).double()
@@ -231,8 +235,9 @@ def train_model(train_path, verbose=False, show_result=True, epochs=20, batch_si
             val_losses.append(loss.item())
 
         print('Epoch %d | Loss %6.2f | Accuracy %6.2f | Val_Loss %6.2f | Val_Accuracy %6.2f' % (
-              epoch, sum(losses) / len(losses), corrects / len(train_set), sum(val_losses) / len(val_losses), val_corrects / len(val_set)))
-        print(output[0], y[0])
+              epoch, sum(losses) / len(losses), corrects / len(train_set), sum(val_losses) / len(val_losses),
+              val_corrects / len(val_set)))
+        # print(output[0], y[0])
         all_losses.append(sum(losses) / len(losses))
         all_accuracy.append(corrects / len(train_set))
         all_val_losses.append(sum(val_losses) / len(val_losses))
@@ -258,30 +263,29 @@ def test_model(model_, test_path, verbose=False, batch_size=12):
 
     model_.eval()
     corrects, totals = 0, 0
+    nb_class_1 = 0
+    nb_class_2 = 0
 
     for batch_num, input_data in enumerate(testloader):
         x, y = input_data
-        x = x.permute(0, 3, 1, 2) / 64
+        x = x.permute(0, 3, 1, 2)  # / 64
 
         x = x.to(device).double()
         y = y.to(device).double()
 
         output = model_(x)
 
-        correct, total = 0, 0
-
         for k in range(len(output)):
             if float(output[k][0].item()) > float(output[k][1].item()):
+                nb_class_1 += 1
                 if int(y[k][0].item()) == 1:
-                    correct += 1
                     corrects += 1
             elif float(output[k][1].item()) >= float(output[k][0].item()):
+                nb_class_2 += 1
                 if int(y[k][1].item()) == 1:
-                    correct += 1
                     corrects += 1
-            total += 1
             totals += 1
-
+    print(f"Class 1: {nb_class_1}, Class 2: {nb_class_2}")
     print('Test Accuracy %6.2f' % (corrects / totals))
 
 
@@ -293,8 +297,8 @@ def load_model(load_path):
     model_ = torch.load(load_path)
     return model_
 
-model = train_model(use_path_train)
-test_model(model, use_path_test)
-
-save_model(model, use_path_model)
-print('Done')
+# model = train_model(use_path_train)
+# test_model(model, use_path_test)
+#
+# save_model(model, use_path_model)
+# print('Done')
