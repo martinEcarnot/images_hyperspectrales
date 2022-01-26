@@ -91,7 +91,8 @@ def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
 
 def crop_all_images(use_path, band_step_=20, crop_idx_dim1_=1300, apply_mask=True, force_creation=True):
     """
-    Use of the crop_image function to extract all hyperspectral image at once into a train and test sub-folders
+    Use of the crop_image function to extract all hyperspectral image at once into a train, valid and test sub-folders
+    of a folder entitled with the number of bands
 
     :param use_path: path where all hyperspectral images are stored
     :param band_step_: step between two wave bands ( if set to 2, takes one out of two bands)
@@ -101,9 +102,12 @@ def crop_all_images(use_path, band_step_=20, crop_idx_dim1_=1300, apply_mask=Tru
     """
     all_files = next(walk(use_path), (None, None, []))[2]  # Detect only the files, not the folders
     hdr_files = [x for x in all_files if "hdr" in x]  # Extract hdr files
-    train_path = os.path.join(use_path, "train")
-    valid_path = os.path.join(use_path, "valid")
-    test_path = os.path.join(use_path, "test")
+    use_path_bands = os.path.join(use_path, str(216 // band_step_)+"_bands")
+    if not os.path.exists(use_path_bands):  # Creation folder entitled with the number of band
+        os.makedirs(use_path_bands)
+    train_path = os.path.join(use_path_bands, "train")
+    valid_path = os.path.join(use_path_bands, "valid")
+    test_path = os.path.join(use_path_bands, "test")
     if not os.path.exists(train_path):  # Creation train folder
         os.makedirs(train_path)
     if not os.path.exists(valid_path):  # Creation validation folder
