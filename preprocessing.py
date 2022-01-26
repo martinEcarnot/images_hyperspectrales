@@ -74,8 +74,12 @@ def reflectance_grain(image, crop_idx_dim1, band_step):
     cols = [i for i in range(image.shape[1])]
     n_bands = 216 // band_step
     bands = [j * band_step for j in range(n_bands)]
+    spectralon_3d = []
     print("Loading spectralon of each band...")
-    spectralon_3d = np.array(image.read_subimage(rows, cols, bands))  # Extract spectralon for each band
+    # spectralon_3d = np.array(image.read_subimage(rows, cols, bands))  # Extract spectralon for each band
+    for num_band in bands:
+        spectralon_3d.append(image.read_subimage(rows, cols, [num_band]))
+    spectralon_3d = np.array(spectralon_3d)
     print("...Done")
 
     # Determination of the threshold to take
