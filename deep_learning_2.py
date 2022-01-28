@@ -5,6 +5,7 @@ from os import walk
 import spectral as sp
 import torch
 import torch.nn as nn
+from matplotlib import pyplot as plt
 from torch.optim import Adam
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import classification_report
@@ -201,10 +202,10 @@ def train_model(train_loader, val_loader, model, loss_fn, optimizer, verbose=Fal
     valid_loss /= num_batches_valid
     correct /= size_train
     correct_valid /= size_valid
-    print(f"Results : \t Accuracy Train: {(100 * correct):>0.1f}%, Avg loss Train: {train_loss:>8f} \t Accuracy "
-          f"Validation: {(100 * correct_valid):>0.1f}%, Avg loss Validation: {valid_loss:>8f}")
+    print(f"Results : \t Accuracy Train: {(100 * correct):>0.1f}% \t Avg loss Train: {train_loss:>8f} \t Accuracy "
+          f"Validation: {(100 * correct_valid):>0.1f}% \t Avg loss Validation: {valid_loss:>8f}")
 
-    return model
+    return model, correct, correct_valid, train_loss, valid_loss
 
 
 def test_model(test_loader, model, loss_fn):
@@ -233,10 +234,11 @@ def test_model(test_loader, model, loss_fn):
             correct += (output.argmax(1) == labels).type(torch.float).sum().item()
     test_loss /= num_batches
     correct /= size
-    print(f"Test : \n Accuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+    print(f"Test : \n Accuracy: {(100 * correct):>0.1f}% \t Avg loss: {test_loss:>8f} \n")
 
     # Determination of other metrics
     print(classification_report(list_y, list_y_pred, labels=np.unique(list_y_pred)))
+    return 100*correct, test_loss
 
 
 def save_model(model_, save_path):
@@ -248,16 +250,52 @@ def load_model(load_path):
     return model_
 
 
-def main_loop(train_path, valid_path, test_path, model, loss_fn, optimizer, epochs=20, batch_size=12):
+def display_save_figure(figure_path, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid, name_figure):
+    fig, axes = plt.subplots(ncols=2, figsize=(15, 7))
+    ax = axes.ravel()
+    list_nb = range(len(list_accu_train))
+    ax[0].plot(list_nb, list_accu_train, label='Train')
+    for a, b in zip(list_nb, list_accu_train):
+        ax[0].text(a, b, str(round(b, 1)))
+    ax[0].plot(list_nb, list_accu_valid, label='Valid')
+    for a, b in zip(list_nb, list_accu_valid):
+        ax[0].text(a, b, str(round(b, 1)))
+    ax[0].set_title('Accuracy given the epochs')
+    ax[0].set_xlabel('Epochs')
+    ax[0].set_ylabel('Accuracy (%)')
+    ax[0].legend()
+    ax[0].grid()
+
+    ax[1].plot(list_nb, list_loss_train, label='Train')
+    for a, b in zip(list_nb, list_loss_train):
+        ax[1].text(a, b, str(round(b, 2)))
+    ax[1].plot(list_nb, list_loss_valid, label='Valid')
+    for a, b in zip(list_nb, list_loss_valid):
+        ax[1].text(a, b, str(round(b, 2)))
+    ax[1].set_title('Loss given the epochs')
+    ax[1].set_xlabel('Epochs')
+    ax[1].set_ylabel('Loss')
+    ax[1].legend()
+    ax[1].grid()
+
+    fig.tight_layout()
+    plt.show()
+    fig.savefig(os.path.join(figure_path, name_figure+".png"), dpi=200, format='png')
+
+
+def main_loop(train_path, valid_path, test_path, figure_path, model,
+              loss_fn, optimizer, name_figure, epochs=20, batch_size=12):
     """
     Main to train a model given a certain number of epoch, a loss and an optimizer
 
     :param train_path:
     :param valid_path:
     :param test_path:
+    :param figure_path:
     :param model: model to train
     :param loss_fn: loss used
     :param optimizer: optimizer for the gradient
+    :param name_figure:
     :param epochs: number of epochs used for training
     :param batch_size:
     :return:
@@ -278,27 +316,48 @@ def main_loop(train_path, valid_path, test_path, model, loss_fn, optimizer, epoc
     test_set = CustomDataset(df_path_test)
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
-    print('training model')
+    print('\nTraining model')
+    list_accu_train = []
+    list_accu_valid = []
+    list_loss_train = []
+    list_loss_valid = []
     for t in range(epochs):
-        print(f"Epoch {t + 1}\n-------------------------------")
-        train_model(train_loader, val_loader, model=model, loss_fn=loss_fn, optimizer=optimizer)
+        print(f"\nEpoch {t + 1}\n-------------------------------")
+        model, correct, correct_valid, train_loss, valid_loss = train_model(train_loader, val_loader, model=model,
+                                                                            loss_fn=loss_fn, optimizer=optimizer)
+        list_accu_train.append(correct*100)
+        list_accu_valid.append(correct_valid*100)
+        list_loss_train.append(train_loss.item())  # Apparently tensor
+        list_loss_valid.append(valid_loss)
 
-    print("Saving model at ", use_path_model)
+    print("\nSaving model at ", use_path_model)
     save_model(model, use_path_model)
 
-    print("Testing model")
-    test_model(test_loader, model=model, loss_fn=loss_fn)
+    print("\nDisplay graphs of accuracy and loss and save figure at ", os.path.join(figure_path, name_figure+'.png'))
+    display_save_figure(figure_path, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid, name_figure)
 
-    print("Done!")
+    print("\nTesting model")
+    test_accu, test_loss = test_model(test_loader, model=model, loss_fn=loss_fn)
+
+    # Saving values
+    print("\nSaving values of train, validation and test loops")
+    save_array = np.asarray([list_accu_train, list_accu_valid, list_loss_train, list_loss_valid])
+    np.savetxt(os.path.join(figure_path, name_figure+"_values_train_valid.csv"), save_array,
+               delimiter=",", fmt='%.5e')  # Train
+    np.savetxt(os.path.join(figure_path, name_figure+"_values_test.csv"), np.asarray([[test_accu], [test_loss]]),
+               delimiter=",", fmt='%.5e')  # Test
+
+    print("\nDone!")
 
 
 # use_path_train = "E:\\Etude technique\\raw\\train"
 # use_path_test = "E:\\Etude technique\\raw\\test"
 # use_path_model = "E:\\Etude technique\\model.pth"
-use_path_train = "D:\\Etude technique\\train"
-use_path_test = "D:\\Etude technique\\test"
-use_path_valid = "D:\\Etude technique\\valid"
-use_path_model = "D:\\Etude technique\\model.pth"
+use_path_train = "D:\\Etude technique\\10_bands\\train"
+use_path_test = "D:\\Etude technique\\10_bands\\test"
+use_path_valid = "D:\\Etude technique\\10_bands\\valid"
+use_path_model = "D:\\Etude technique\\10_bands\\model.pth"
+use_path_figure = "D:\\Etude technique\\10_bands\\"
 
 learning_rate = 1e-4
 
@@ -307,12 +366,14 @@ path_band = os.path.join(use_path_train, os.listdir(use_path_train)[0])
 file_band = [x for x in os.listdir(path_band) if "hdr" in x][0]
 image_band = sp.open_image(os.path.join(path_band, file_band))
 dim_in = image_band.shape[2]
-# dim_in = 10
 
-model = CNN(dim_in)  # .double()
+model = CNN(dim_in)
 weight = torch.tensor([4., 2.]).cuda() if torch.cuda.is_available() else torch.tensor([4., 2.])
 loss_fn = nn.CrossEntropyLoss(weight=weight)
 # loss_fn = nn.BCELoss()
 optimizer = Adam(model.parameters(), lr=learning_rate)
-epochs = 20
-main_loop(use_path_train, use_path_valid, use_path_test, model, loss_fn, optimizer, epochs=epochs, batch_size=12)
+epochs = 10
+name_file = input("Enter the name of the figure to save (it should contain which images are "
+                  "selected to do the training, validation and testing): ")
+main_loop(use_path_train, use_path_valid, use_path_test, use_path_figure, model, loss_fn, optimizer, name_file,
+          epochs=epochs, batch_size=12)
