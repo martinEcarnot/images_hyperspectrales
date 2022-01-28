@@ -7,6 +7,7 @@ from skimage.measure import label, regionprops
 import matplotlib.patches as patches
 from brightest_band import brightest_band
 from tqdm import tqdm
+import pandas as pd
 
 
 def show_image(img):
@@ -125,7 +126,12 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1300, thresh_refl=0.15, area
     img = sp.open_image(folder_path + s_img + '.hdr')
 
     # Automatically detect the best band to do extraction where luminance is the highest
-    band, max_ref = brightest_band(img)
+    # band, max_ref = brightest_band(img)
+
+    # Read csv file to get brightest band
+    df = pd.read_csv(folder_path + '\\..\\info\\brightest_bands.csv', index_col=0)
+    band, max_ref = df.loc[s_img]
+
     # band, max_ref = 105, 29473
     # print('band: ', band, 'Value: ', max_ref)
     thresh_lum_spectralon = max_ref * 0.8
