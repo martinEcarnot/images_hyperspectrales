@@ -9,7 +9,7 @@ from os import walk
 
 
 def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
-               band_step=20, apply_mask=False, force_creation=False):
+               band_step=20, apply_mask=False, force_creation=False, verbose=True):
     """
     Given an hyperspectral image, use the function preprocessing from preprocessing.py to retrieve bbox coordinates,
     extract the hyperspectral image for each grain and save it in a particular folder.
@@ -22,6 +22,8 @@ def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
     :param band_step: step between two wave bands ( if set to 2, takes one out of two bands)
     :param apply_mask: bool to apply convex mask to the grain in order to keep only the grain, no background
     :param force_creation: bool, if the file already exist, set to True to force the rewriting
+    :param verbose: Display the comparison between original image and the reflectance one and the original
+                    image with bbox if set to True
     """
     bool_file = 0
     # Creation of the folder if it doesn't exist
@@ -31,7 +33,7 @@ def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
 
     # By default, if the folder already exists, nothing is done
     if bool_file or force_creation:
-        arr_bbox, masks = preprocessing(path_in, filename, crop_idx_dim1=crop_idx_dim1)
+        arr_bbox, masks = preprocessing(path_in, filename, crop_idx_dim1=crop_idx_dim1, verbose=verbose)
         # all_heights = []
         # all_widths = []
         # for k in range(len(arr_bbox)):
@@ -89,7 +91,7 @@ def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
             envi.save_image(file_name, new_img, force=True)
 
 
-def crop_all_images(use_path, band_step_=20, crop_idx_dim1_=1300, apply_mask=True, force_creation=True):
+def crop_all_images(use_path, band_step_=20, crop_idx_dim1_=1300, apply_mask=True, force_creation=True, verbose=True):
     """
     Use of the crop_image function to extract all hyperspectral image at once into a train, valid and test sub-folders
     of a folder entitled with the number of bands
@@ -99,6 +101,8 @@ def crop_all_images(use_path, band_step_=20, crop_idx_dim1_=1300, apply_mask=Tru
     :param crop_idx_dim1_: index of the edge of the graph paper
     :param apply_mask: bool to apply convex mask to the grain in order to keep only the grain, no background
     :param force_creation: bool, if the file already exist, set to True to force the rewriting
+    :param verbose: Display the comparison between original image and the reflectance one and the original
+                    image with bbox if set to True
     """
     all_files = next(walk(use_path), (None, None, []))[2]  # Detect only the files, not the folders
     hdr_files = [x for x in all_files if "hdr" in x]  # Extract hdr files
@@ -133,4 +137,4 @@ def crop_all_images(use_path, band_step_=20, crop_idx_dim1_=1300, apply_mask=Tru
             path_out = os.path.join(train_path, filename, "")
 
         crop_image(path, path_out, filename, ext, crop_idx_dim1=crop_idx_dim1_, band_step=band_step_,
-                   apply_mask=apply_mask, force_creation=force_creation)
+                   apply_mask=apply_mask, force_creation=force_creation, verbose=verbose)
