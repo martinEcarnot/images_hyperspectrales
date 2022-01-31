@@ -1,5 +1,8 @@
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
+import os
+import spectral as sp
 
 
 def brightest_band(img):
@@ -23,3 +26,24 @@ def brightest_band(img):
     return means.index(max(means)), max(means)
 
 
+def retrieve_all_brightest_bands_to_csv(use_path):
+    """
+    Create a CSV with the value and index of the brightest band for each image
+
+    :param use_path: path of the global folder (ex: D:\\Etude technique)
+    """
+    list_path = os.listdir(use_path)
+    list_hdr = [x for x in list_path if "hdr" in x]
+    list_path_hdr = [os.path.join(use_path, x) for x in list_hdr]
+
+    df = pd.DataFrame(columns=["band", "max_ref"])
+    for idx, path in enumerate(list_path_hdr):
+        img = sp.open_image(path)
+        band, max_ref = brightest_band(img)
+        df_tmp = pd.DataFrame([[band, max_ref]], columns=["band", "max_ref"], index=[list_hdr[idx][:-4]])
+        df = df.append(df_tmp)
+
+    path = os.path.join(use_path, "csv")
+    if not os.path.exists(path):  # Creation folder if it doesn't exit
+        os.makedirs(path)
+    df.to_csv(os.path.join(path, "brightest_bands.csv"))
