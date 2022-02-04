@@ -96,7 +96,7 @@ def reflectance_grain(image, crop_idx_dim1, band_step):
     ref = np.zeros((image.shape[1], n_bands), image.dtype)
     for band in tqdm(range(n_bands), desc="Retrieving luminance values"):
 
-        thresh_lum_spectralon = mean_thresh[band] * 0.8  # Take 80% of the value as the threshold
+        thresh_lum_spectralon = mean_thresh[band] * 0.7  # Take 70% of the value as the threshold
         ret0, binary_image0 = cv.threshold(spectralon_3d[:, :, band], thresh_lum_spectralon, 1, cv.THRESH_BINARY)
         binary_image0 = cv.erode(binary_image0, np.ones((10, 10), np.uint8))
         binary_image0 = cv.morphologyEx(binary_image0, cv.MORPH_CLOSE, np.ones((20, 20), np.uint8))
@@ -139,7 +139,7 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1300, thresh_refl=0.15, area
     band = int(band)
 
     # print('band: ', band, 'Value: ', max_ref)
-    thresh_lum_spectralon = max_ref * 0.8
+    thresh_lum_spectralon = max_ref * 0.7
 
     img = np.array(img.read_band(band), dtype=np.float64)
 

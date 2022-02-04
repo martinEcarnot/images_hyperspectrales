@@ -1,9 +1,10 @@
 from preprocessing import *
 import cv2
 import statistics
+from os import walk
 
 
-def extract_features(path_in, filename, ext, crop_idx_dim1=1300, verbose=True):
+def extract_features(path_in, filename, ext, crop_idx_dim1=1300, verbose=False):
     """
     Given an hyperspectral image, use the function preprocessing from preprocessing.py to retrieve bbox coordinates,
     extract the hyperspectral image for each grain and save it in a particular folder.
@@ -21,19 +22,19 @@ def extract_features(path_in, filename, ext, crop_idx_dim1=1300, verbose=True):
     img = sp.open_image(path_in + filename + ext)
 
     # The number of band is considered as a static number, 216
-    n_bands = 216
+    n_bands = 1  # 216
 
     # Retrieve values to convert grain image to reflectance
-    array_ref = reflectance_grain(img, crop_idx_dim1-350, 1)  # -350 to remove graph paper
+    array_ref = reflectance_grain(img, crop_idx_dim1-350, 216)  # -350 to remove graph paper  # 1
 
     # Array to store features (order: min, max, median, mean, std)
-    array_features = np.empty([len(arr_bbox), n_bands, 5])
+    array_features = np.zeros([len(arr_bbox), n_bands, 5])
 
     # Loop over all bbox detected with a smart progress meter (tqdm)
     for k in tqdm(range(len(arr_bbox)), desc="Extracting features"):
 
         box = arr_bbox[k]
-        grain_img = img[box[1]:box[3], box[0]:box[2]].astype('float16')
+        grain_img = img[box[1]:box[3], box[0]:box[2]].astype('float64')
         h, w = grain_img.shape[0], grain_img.shape[1]
 
         edge = box[0]  # Coordinate of the column in the original image
@@ -48,7 +49,7 @@ def extract_features(path_in, filename, ext, crop_idx_dim1=1300, verbose=True):
             new_grain_mask = cv2.bitwise_and(new_grain, new_grain, mask=np.array(masks[k]).transpose())
 
             # Computing the average reflectance of the grain for one band
-            x_size, y_size = new_grain_mask.size
+            x_size, y_size = new_grain_mask.shape
             total_value = []
             for i in range(x_size):
                 for t in range(y_size):
@@ -56,16 +57,36 @@ def extract_features(path_in, filename, ext, crop_idx_dim1=1300, verbose=True):
                     if value != 0:
                         total_value.append(value)
 
-            array_features[k, j] = [max(total_value), min(total_value), statistics.median(total_value),
-                                    statistics.mean(total_value), statistics.stdev(total_value)]
+            # In some rare cases, lum = 0 -> new_grain is a zeros array. 0 are left in the features array
+            if total_value:
+                array_features[k, j] = [max(total_value), min(total_value), statistics.median(total_value),
+                                        statistics.mean(total_value), statistics.stdev(total_value)]
 
     # Save
-    use_path = os.path.join(path_in, "csv", "")
-    np.savetxt(os.path.join(use_path, "features_grains_" + filename + ".csv"), array_features, delimiter=",",
-               header="min, max, median, mean, std")
+    use_path = os.path.join(path_in, "csv", "features_grains_" + filename + ".npy")
+    np.save(use_path, array_features)  # Order: min, max, median, mean, std
+
+    # Can t save 3D array with savetxt, so no CSV
+    # array_load = np.load(use_path)  # To load back
 
 
+def save_reflectance_spectralon(use_path, crop_idx_dim1=1300):
+    """
+    Save the luminance value for all images for all bands
+    :param use_path:
+    :param crop_idx_dim1:
+    """
+    path = os.path.join(use_path, "")
+    all_files = next(walk(path), (None, None, []))[2]  # Detect only the files, not the folders
+    hdr_files = [x for x in all_files if "hdr" in x]  # Extract hdr files
 
+    for num, file in enumerate(hdr_files):
+        print(f"\nImage progression: {num+1}/8\n")
+        img = sp.open_image(os.path.join(path + file))
+        # Retrieve values to convert grain image to reflectance
+        array_ref = reflectance_grain(img, crop_idx_dim1-350, 108)  # -350 to remove graph paper, 1 for all bands
 
-
+        # Save
+        np.savetxt(os.path.join(path, "csv", "lum_spectralon_" + file[:-4] + ".csv"), array_ref, delimiter=",",
+                   fmt='%1.3f')
 
