@@ -72,9 +72,9 @@ def extract_features(path_in, filename, ext, crop_idx_dim1=1300, verbose=False):
 
 def save_reflectance_spectralon(use_path, crop_idx_dim1=1300):
     """
-    Save the luminance value for all images for all bands
-    :param use_path:
-    :param crop_idx_dim1:
+    Save the luminance value for all images for all bands in CSV files in a subfolder "csv"
+    :param use_path: Global path where all hyperspectral images are
+    :param crop_idx_dim1: index of the edge of the graph paper
     """
     path = os.path.join(use_path, "")
     all_files = next(walk(path), (None, None, []))[2]  # Detect only the files, not the folders

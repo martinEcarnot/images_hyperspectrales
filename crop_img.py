@@ -2,7 +2,7 @@ import cv2
 import spectral as sp
 import spectral.io.envi as envi
 import numpy as np
-from preprocessing import preprocessing, reflectance_grain, show_image
+from preprocessing import preprocessing, show_image
 from tqdm import tqdm
 import os
 from os import walk

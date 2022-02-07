@@ -53,6 +53,10 @@ class CustomDataset(Dataset):
         self.labels = df_path["class"]
 
     def __len__(self):
+        """
+        Function used by the Dataset to retrieve the size
+        :return: len of the dataframe
+        """
         return len(self.paths_hdr)
 
     def __getitem__(self, idx):
@@ -67,13 +71,20 @@ class CustomDataset(Dataset):
         path_hdr = self.paths_hdr[idx]
         img = sp.open_image(path_hdr)
         img_tensor = torch.tensor(img[:, :, :])
-
+        # Use "[img_tensor, torch.tensor(label)], torch.tensor(label)" for multiple input (example)
         return img_tensor, torch.tensor(label)
 
 
 class CNN(nn.Module):
+    """
+    Creation of the neural network
+    """
 
     def __init__(self, dim_in):
+        """
+        Initialisation of the layers
+        :param dim_in: dimension of the input image
+        """
         super().__init__()
         # 4 conv blocks / flatten / linear / softmax
 
@@ -102,18 +113,25 @@ class CNN(nn.Module):
         self.dropout = nn.Dropout(0.2)
         # self.linear2 = nn.Linear(20, 20)
         self.linear3 = nn.Linear(30, 2)
+        # For multiple input: 30 + number of input (1 here)
+        # self.linear3 = nn.Linear(31, 2)
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, input_data):
+        """
+        Order of the layers
+        :param input_data: Input image
+        :return: a tensor of size (1, 2) (Softmax)
+        """
+        # If multiple input:
+        # image, variete = input_data[0], input_data[1]
         x = self.relu(self.conv1_0(input_data))
         x = self.pool(self.relu(self.conv1_1(x)))
         # print("x.shape 1: ", x.shape)
 
         x = self.pool(self.relu(self.conv2_1(x)))
-
         x = self.relu(self.conv3_1(x))
         x = self.pool(self.relu(self.conv3_2(x)))
-        #
         x = self.relu(self.conv4_1(x))
         x = self.pool(self.relu(self.conv4_2(x)))
         # print("x.shape 4: ", x.shape)
@@ -123,12 +141,26 @@ class CNN(nn.Module):
         x = self.linear1(x)
         x = self.dropout(x)
         x = self.relu(x)
+        # Add another input
+        # x = torch.cat((variete[..., None], x), -1)
         x = self.linear3(x)
         x = self.softmax(x)
         return x
 
 
 def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, verbose=False):
+    """
+    Loop to train the deep learning model.
+
+    :param train_loader: Dataloader of the training dataset
+    :param val_loader: Dataloader of the validation dataset
+    :param device: cpu or cuda
+    :param model: the CNN model
+    :param loss_fn: the loss to consider
+    :param optimizer: optimizer (Adam)
+    :param verbose: Set to True to display the model parameters and information during training
+    :return: The trained model, accuracy training, accuracy validation, train_loss, valid_loss
+    """
     if verbose:
         print(model)
 
@@ -211,9 +243,10 @@ def test_model(test_loader, device, model, loss_fn):
     Apply the trained model to test dataset
 
     :param test_loader: test dataloader
-    :param device:
-    :param model: model to use (ANN)
-    :param loss_fn: the loss for training
+    :param device: cpu or cuda
+    :param model: model to use (CNN)
+    :param loss_fn: the loss to consider
+    :return: Accuracy and loss of the test
     """
     size = len(test_loader.dataset)
     num_batches = len(test_loader)
@@ -240,15 +273,35 @@ def test_model(test_loader, device, model, loss_fn):
 
 
 def save_model(model_, save_path):
+    """
+    Save the model to a given path
+    :param model_: Model to save
+    :param save_path: Path to use
+    """
     torch.save(model_, save_path)
 
 
 def load_model(load_path):
+    """
+    Load a saved model
+    :param load_path: location of the model
+    :return: the model
+    """
     model_ = torch.load(load_path)
     return model_
 
 
 def display_save_figure(figure_path, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid, name_figure):
+    """
+    After the training is done, the results are displayed and saved
+
+    :param figure_path: path to save the figure and the data
+    :param list_accu_train: List of all accuracy during training
+    :param list_accu_valid: List of all accuracy during validation
+    :param list_loss_train: List of all loss during training
+    :param list_loss_valid: List of all loss during validation
+    :param name_figure: name to give to the figure
+    """
     fig, axes = plt.subplots(ncols=2, figsize=(15, 7))
     ax = axes.ravel()
     list_nb = range(len(list_accu_train))
@@ -286,15 +339,14 @@ def main_loop(use_path, model, loss_fn, optimizer, name_figure, device, epochs=2
     """
     Main to train a model given a certain number of epoch, a loss and an optimizer
 
-    :param use_path:
+    :param use_path: Path where the folder train, valid and test are located
     :param model: model to train
     :param loss_fn: loss used
     :param optimizer: optimizer for the gradient
-    :param name_figure:
-    :param device:
+    :param name_figure: name to give to the figure
+    :param device: cpu or cuda
     :param epochs: number of epochs used for training
-    :param batch_size:
-    :return:
+    :param batch_size: number of image to process before updating parameters
     """
     train_path = os.path.join(use_path, "train", "")
     valid_path = os.path.join(use_path, "valid", "")
