@@ -21,11 +21,11 @@ def extract_features(path_in, filename, ext, crop_idx_dim1=1300, verbose=False):
 
     img = sp.open_image(path_in + filename + ext)
 
-    # The number of band is considered as a static number, 216
-    n_bands = 1  # 216
+    n_bands = 216
+    band_step = n_bands // 216  # To make sure to select the right band in the array_ref of the spectralon
 
     # Retrieve values to convert grain image to reflectance
-    array_ref = reflectance_grain(img, crop_idx_dim1-350, 216)  # -350 to remove graph paper  # 1
+    array_ref = np.load(os.path.join(path_in, "csv", "lum_spectralon_" + filename + ".csv"))
 
     # Array to store features (order: min, max, median, mean, std)
     array_features = np.zeros([len(arr_bbox), n_bands, 5])
@@ -40,10 +40,10 @@ def extract_features(path_in, filename, ext, crop_idx_dim1=1300, verbose=False):
         edge = box[0]  # Coordinate of the column in the original image
 
         for j in range(n_bands):
-            new_grain = grain_img[:, :, j]
+            new_grain = grain_img[:, :, j*band_step]
             # Reflectance
             for x in range(0, w):
-                lum = array_ref[x+edge, j]
+                lum = array_ref[x+edge, j*band_step]
                 new_grain[:, x] = new_grain[:, x] / lum if lum != 0 else [0] * h
 
             new_grain_mask = cv2.bitwise_and(new_grain, new_grain, mask=np.array(masks[k]).transpose())
@@ -84,9 +84,9 @@ def save_reflectance_spectralon(use_path, crop_idx_dim1=1300):
         print(f"\nImage progression: {num+1}/8\n")
         img = sp.open_image(os.path.join(path + file))
         # Retrieve values to convert grain image to reflectance
-        array_ref = reflectance_grain(img, crop_idx_dim1-350, 108)  # -350 to remove graph paper, 1 for all bands
+        array_ref = reflectance_grain(img, crop_idx_dim1-350, 1)  # -350 to remove graph paper, 1 for all bands
 
         # Save
         np.savetxt(os.path.join(path, "csv", "lum_spectralon_" + file[:-4] + ".csv"), array_ref, delimiter=",",
-                   fmt='%1.3f')
+                   fmt='%1.1f')
 
