@@ -25,7 +25,7 @@ def extract_features(path_in, filename, ext, crop_idx_dim1=1300, verbose=False):
     band_step = n_bands // 216  # To make sure to select the right band in the array_ref of the spectralon
 
     # Retrieve values to convert grain image to reflectance
-    array_ref = np.load(os.path.join(path_in, "csv", "lum_spectralon_" + filename + ".csv"))
+    array_ref = np.genfromtxt(os.path.join(path_in, "csv", "lum_spectralon_" + filename + ".csv"), delimiter=',')
 
     # Array to store features (order: min, max, median, mean, std)
     array_features = np.zeros([len(arr_bbox), n_bands, 5])
@@ -68,6 +68,27 @@ def extract_features(path_in, filename, ext, crop_idx_dim1=1300, verbose=False):
 
     # Can t save 3D array with savetxt, so no CSV
     # array_load = np.load(use_path)  # To load back
+
+
+def extract_all_features(path_in, crop_idx_dim1=1300, verbose=False):
+    """
+    Use of the function extract_features on all hyperspectral images and save them in the csv file.
+
+    :param path_in: path of the folder of the hyperspectral image
+    :param crop_idx_dim1: index of the edge of the graph paper
+    :param verbose: Display the comparison between original image and the reflectance one and the original
+                    image with bbox if set to True
+    """
+    use_path = os.path.join(path_in, "")
+    all_files = next(walk(use_path), (None, None, []))[2]  # Detect only the files, not the folders
+    hdr_files = [x for x in all_files if "hdr" in x]  # Extract hdr files
+    number_files = len(hdr_files)
+    ext = '.hdr'
+
+    for idx, file in enumerate(hdr_files):
+        print(f"\nNew file, {idx+1}/{number_files}\n")
+        filename = file[:-4]  # Remove extension
+        extract_features(path_in, filename, ext, crop_idx_dim1, verbose)
 
 
 def save_reflectance_spectralon(use_path, crop_idx_dim1=1300):

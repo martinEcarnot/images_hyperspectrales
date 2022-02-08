@@ -55,7 +55,7 @@ def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
 
         # Retrieve values to convert grain image to reflectance
         # array_ref = reflectance_grain(img, crop_idx_dim1-350, band_step)  # -350 to remove graph paper
-        array_ref = np.load(os.path.join(path_in, "csv", "lum_spectralon_" + filename + ".csv"))
+        array_ref = np.genfromtxt(os.path.join(path_in, "csv", "lum_spectralon_" + filename + ".csv"), delimiter=',')
 
         # Loop over all bbox detected with a smart progress meter (tqdm)
         for k in tqdm(range(len(arr_bbox)), desc="Creating images"):
