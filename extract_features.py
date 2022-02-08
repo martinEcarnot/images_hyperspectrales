@@ -64,7 +64,7 @@ def extract_features(path_in, filename, ext, crop_idx_dim1=1300, verbose=False):
 
     # Save
     use_path = os.path.join(path_in, "csv", "features_grains_" + filename + ".npy")
-    np.save(use_path, array_features)  # Order: min, max, median, mean, std
+    np.save(use_path, array_features)  # Order: max, min, median, mean, std
 
     # Can t save 3D array with savetxt, so no CSV
     # array_load = np.load(use_path)  # To load back
