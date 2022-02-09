@@ -102,7 +102,7 @@ def save_reflectance_spectralon(use_path, crop_idx_dim1=1300):
     hdr_files = [x for x in all_files if "hdr" in x]  # Extract hdr files
 
     for num, file in enumerate(hdr_files):
-        print(f"\nImage progression: {num+1}/8\n")
+        print(f"\nImage progression: {num+1}/{len(hdr_files)}\n")
         img = sp.open_image(os.path.join(path + file))
         # Retrieve values to convert grain image to reflectance
         array_ref = reflectance_grain(img, crop_idx_dim1-350, 1)  # -350 to remove graph paper, 1 for all bands
@@ -111,3 +111,81 @@ def save_reflectance_spectralon(use_path, crop_idx_dim1=1300):
         np.savetxt(os.path.join(path, "csv", "lum_spectralon_" + file[:-4] + ".csv"), array_ref, delimiter=",",
                    fmt='%1.1f')
 
+
+def display_features(path_in, feature, nb_grain_figure=0):
+    """
+    Display the features for each image
+    Order for all file: max, min, median, mean, std
+    Shape: ( number of grains detected, 216, 5 )
+
+    :param path_in: path of the folder of the hyperspectral image ( ex: "D:\\Etude technique" )
+    :param feature: Feature to choose from max, min, median, mean, std
+    :param nb_grain_figure: Number of grain to display. Set to 0 for all of them
+    """
+    use_path = os.path.join(path_in, "csv")
+    all_files = next(walk(use_path), (None, None, []))[2]  # Detect only the files, not the folders
+    npy_files = [x for x in all_files if x[-3:] == "npy"]  # Extract npy files
+    # number_files = len(npy_files)
+    order = ["max", "min", "median", "mean", "std"]
+    idx_feature = order.index(feature)
+
+    fig, axs = plt.subplots(2, 4, figsize=(17, 9))
+
+    for idx, file in enumerate(npy_files):
+        path = os.path.join(use_path, file)
+        data = np.load(path)
+
+        list_grain = []  # Will store list of a feature for each grain
+        number_grain = data.shape[0]
+        number_bands = data.shape[1]
+        nb_grain = nb_grain_figure if nb_grain_figure != 0 else number_grain
+        band_step = number_grain // nb_grain
+        for grain in range(nb_grain):
+            list_tmp = []
+            for i in range(number_bands):
+                list_tmp.append(data[grain * band_step, i, idx_feature])
+            list_grain.append(list_tmp)
+
+        x_axis = range(number_bands)
+        row = 0 if idx < 4 else 1
+        for k in list_grain:
+            axs[row, idx % 4].plot(x_axis, k)
+        # Determination of the year and the variety
+        variety = file.split("_")[2].split("-")
+        var = variety[0] if "var" in variety[0] else variety[1]
+        year = file.split("_")[6].split("-")[0]
+
+        axs[row, idx % 4].set_title(f'{var}_{year}')
+        axs[row, idx % 4].set_xlabel('Bands')
+        axs[row, idx % 4].set_ylabel('Reflectance')
+        axs[row, idx % 4].grid()
+        # axs[row, idx % 4].legend()
+
+    fig.suptitle(f"{feature} of each grain of each image per band")  # Global title
+    fig.tight_layout()
+    plt.show()
+    # fig.savefig(os.path.join(figure_path, name_figure+".png"), dpi=200, format='png')
+
+    # path = os.path.join(path_in, "csv", "features_grains_var1-x73y14_7000_us_2x_2021-10-23T151946_corr.npy")
+    # test = np.load(path)
+    # print(test.shape)
+    # # Order: max, min, median, mean, std
+    #
+    # mean_grain = []
+    # number_bands = test.shape[1]
+    # number_grain = test.shape[0]
+    # nb_grain = 157
+    # band_step = number_grain // nb_grain
+    # for grain in range(nb_grain):
+    #     list_tmp = []
+    #     for i in range(number_bands):
+    #         list_tmp.append(test[grain * band_step, i, 3])
+    #     mean_grain.append(list_tmp)
+    #
+    # x_axis = range(number_bands)
+    # for idx, k in enumerate(mean_grain):
+    #     plt.plot(x_axis, k, label=f'Grain {idx * band_step + 1}')
+    #
+    # plt.legend()
+    # plt.grid()
+    # plt.show()
