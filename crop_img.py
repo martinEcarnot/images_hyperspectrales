@@ -1,4 +1,5 @@
 import cv2
+import matplotlib.pyplot as plt
 import spectral as sp
 import spectral.io.envi as envi
 import numpy as np
@@ -6,6 +7,7 @@ from preprocessing import preprocessing, show_image
 from tqdm import tqdm
 import os
 from os import walk
+import statistics
 
 
 def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
@@ -139,3 +141,59 @@ def crop_all_images(use_path, band_step_=20, crop_idx_dim1_=1300, apply_mask=Tru
 
         crop_image(path, path_out, filename, ext, crop_idx_dim1=crop_idx_dim1_, band_step=band_step_,
                    apply_mask=apply_mask, force_creation=force_creation, verbose=verbose)
+
+def get_grain_size(path_in, path_out, filename, ext, crop_idx_dim1=1300,
+                   band_step=20, apply_mask=False, force_creation=False, verbose=False):
+    """
+    Given an hyperspectral image, use the function preprocessing from preprocessing.py to retrieve bbox coordinates,
+    extract the hyperspectral image for each grain and save it in a particular folder.
+
+    :param path_in: path of the folder of the hyperspectral image
+    :param path_out: path of the folder to save grain images (ex: path_in + filename + '/')
+    :param filename: name of the image to work with (ex: 'var8-x75y12_7000_us_2x_2021-10-20T113607_corr')
+    :param ext: extension ('hdr' here)
+    :param crop_idx_dim1: index of the edge of the graph paper
+    :param band_step: step between two wave bands ( if set to 2, takes one out of two bands)
+    :param apply_mask: bool to apply convex mask to the grain in order to keep only the grain, no background
+    :param force_creation: bool, if the file already exist, set to True to force the rewriting
+    :param verbose: Display the comparison between original image and the reflectance one and the original
+                    image with bbox if set to True
+    """
+    arr_bbox, masks = preprocessing(path_in, filename, crop_idx_dim1=crop_idx_dim1, verbose=verbose)
+
+    all_sizes = []
+    for mask in masks:
+        size = sum(sum(mask))
+        all_sizes.append(size)
+
+    print('len', len(all_sizes))
+    print('min', min(all_sizes))
+    print('max', max(all_sizes))
+    print('mean', statistics.mean(all_sizes))
+    print('stdev', np.std(all_sizes))
+    print('quantiles', statistics.quantiles(all_sizes))
+    print('\n')
+
+
+    # Creating plot
+    plt.boxplot(all_sizes)
+    # plt.show()
+
+path_in = 'E:\\Etude Technique\\raw\\'
+path_out = path_in
+filename = ['var1-x73y14_7000_us_2x_2021-10-23T151946_corr',
+            'var1-x75y20_7000_us_2x_2021-10-19T160916_corr',
+            'var8-x74y17_7000_us_2x_2021-10-23T150719_corr',
+            'var8-x75y12_7000_us_2x_2021-10-20T113607_corr',
+            'x30y21-var1_11000_us_2x_2020-12-02T095609_corr',
+            'x32y23-var8_8000_us_2x_2020-12-02T155853_corr',
+            'x33y24-var1_11000_us_2x_2020-12-02T095946_corr',
+            'x34y21-var8_8000_us_2x_2020-12-02T142436_corr']
+
+ext = 'hdr'
+
+for k in range(len(filename)):
+    print(filename[k])
+    get_grain_size(path_in, path_out, filename[k], ext)
+
+plt.show()
