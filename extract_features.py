@@ -139,11 +139,11 @@ def display_features(path_in, feature, nb_grain_figure=0):
         number_grain = data.shape[0]
         number_bands = data.shape[1]
         nb_grain = nb_grain_figure if nb_grain_figure != 0 else number_grain
-        band_step = number_grain // nb_grain
+        grain_step = number_grain // nb_grain
         for grain in range(nb_grain):
             list_tmp = []
             for i in range(number_bands):
-                list_tmp.append(data[grain * band_step, i, idx_feature])
+                list_tmp.append(data[grain * grain_step, i, idx_feature])
             list_grain.append(list_tmp)
 
         x_axis = range(number_bands)
@@ -166,26 +166,61 @@ def display_features(path_in, feature, nb_grain_figure=0):
     plt.show()
     # fig.savefig(os.path.join(figure_path, name_figure+".png"), dpi=200, format='png')
 
-    # path = os.path.join(path_in, "csv", "features_grains_var1-x73y14_7000_us_2x_2021-10-23T151946_corr.npy")
-    # test = np.load(path)
-    # print(test.shape)
-    # # Order: max, min, median, mean, std
-    #
-    # mean_grain = []
-    # number_bands = test.shape[1]
-    # number_grain = test.shape[0]
-    # nb_grain = 157
-    # band_step = number_grain // nb_grain
-    # for grain in range(nb_grain):
-    #     list_tmp = []
-    #     for i in range(number_bands):
-    #         list_tmp.append(test[grain * band_step, i, 3])
-    #     mean_grain.append(list_tmp)
-    #
-    # x_axis = range(number_bands)
-    # for idx, k in enumerate(mean_grain):
-    #     plt.plot(x_axis, k, label=f'Grain {idx * band_step + 1}')
-    #
-    # plt.legend()
-    # plt.grid()
-    # plt.show()
+
+def display_boxplot(path_in, number_of_the_band=150):
+    """
+    Display the comparison of boxplot for a given band for all images
+
+    :param path_in: path of the folder of the hyperspectral image ( ex: "D:\\Etude technique" )
+    :param number_of_the_band: The band to realize the boxplot
+    """
+    use_path = os.path.join(path_in, "csv")
+    all_files = next(walk(use_path), (None, None, []))[2]  # Detect only the files, not the folders
+    npy_files = [x for x in all_files if x[-3:] == "npy"]  # Extract npy files
+
+    mini, maxi, mu, sigma, name = [], [], [], [], []
+    for idx, file in enumerate(npy_files):
+        path = os.path.join(use_path, file)
+        data = np.load(path)
+        number_grain = data.shape[0]
+        mini_tmp, maxi_tmp, mu_tmp, sigma_tmp = 0, 0, 0, 0
+        for i in range(number_grain):
+            mini_tmp += data[i, number_of_the_band, 1]
+            maxi_tmp += data[i, number_of_the_band, 0]
+            mu_tmp += data[i, number_of_the_band, 3]
+            sigma_tmp += data[i, number_of_the_band, 4]
+        mini.append(mini_tmp/number_grain)
+        maxi.append(maxi_tmp/number_grain)
+        mu.append(mu_tmp/number_grain)
+        sigma.append(sigma_tmp/number_grain)
+
+        # Determination of the year and the variety
+        variety = file.split("_")[2].split("-")
+        var = variety[0] if "var" in variety[0] else variety[1]
+        year = file.split("_")[6].split("-")[0]
+        position = file.split("-")
+        pos_tmp = position[0] if "x" in position[0] else position[1]
+        pos_tmp = pos_tmp.split("_")
+        pos = pos_tmp[0] if "x" in pos_tmp[0] else pos_tmp[2]
+        name.append(f'{pos}_{var}_{year}')
+
+    # create stacked errorbars:
+    plt.errorbar(np.arange(8), mu, sigma, fmt='ok', lw=3)
+    plt.errorbar(np.arange(8), mu, [[mu_i - mini_i for mu_i, mini_i in zip(mu, mini)],
+                                    [maxi_i - mu_i for maxi_i, mu_i in zip(maxi, mu)]],
+                 fmt='.k', ecolor='gray', lw=1)
+    list_nb = range(len(sigma))
+    for a, b in zip(list_nb, mu):
+        plt.text(a+0.07, b-0.005, str(round(b, 2)), ha='left')
+    for a, b in zip(list_nb, mini):
+        plt.text(a+0.07, b-0.005, str(round(b, 2)), ha='left')
+    for a, b in zip(list_nb, maxi):
+        plt.text(a+0.07, b-0.005, str(round(b, 2)), ha='left')
+
+    plt.xticks(list_nb, name)
+    plt.xticks(rotation=45, ha='right')
+    plt.xlabel('Name image')
+    plt.ylabel('Reflectance')
+    plt.title(f"Boxplot of reflectance per image for the band {number_of_the_band}")
+    plt.tight_layout()
+    plt.show()
