@@ -13,3 +13,6 @@ of grains.
 
 Everything has been thought to be automatised given a folder where hyperspectral 
 images are stored. The address "D:\\Etude technique" is an example.
+
+The csv folder regroups every intermediate result done in order to accelerate 
+computing time by loading values already calculated.
