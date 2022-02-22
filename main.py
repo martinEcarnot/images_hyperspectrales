@@ -1,63 +1,88 @@
-# from preprocessing import preprocessing
-# from crop_img import crop_image
-# import matplotlib.pyplot as plt
-# import spectral as sp
-from deep_learning import *
-from torch.utils.data import DataLoader
-
-# Set path
-PATH = "D:/Etude technique/"
-# PATH = 'C:/Users/kiera/Documents/EMA/3A/2IA/Image/ET/'
-
-# Select file name
-# file = 'var8-x75y12_7000_us_2x_2021-10-20T113607_corr'
-file = "x30y21-var1_11000_us_2x_2020-12-02T095609_corr"
 
 """
-# Preprocessing only
+Retrieve the brightest band vor each image to do the detection
+"""
+# from brightest_band import *
+# use_path = "D:\\Etude technique"
+# retrieve_all_brightest_bands_to_csv(use_path)
 
+
+"""
+Function to save values of the spectralon for each band for the reflectance and save into a 'csv' folder
+"""
+# from extract_features import *
+# path_in = "D:\\Etude technique"
+# save_reflectance_spectralon(path_in, crop_idx_dim1=1300)
+
+
+"""
+Display and retrieve the image after the detection of bounding boxes and masks
+"""
+# PATH = "D:\\Etude technique\\"
 # sImg = "var8-x75y12_7000_us_2x_2021-10-20T113607_corr"
-# array_bbox_, masks = preprocessing(PATH, sImg)
-# print(array_bbox_)
-# print(array_bbox_.shape)
-# print(len(masks))
+# # sImg = "x30y21-var1_11000_us_2x_2020-12-02T095609_corr"
+# array_bbox_, masks = preprocessing(PATH, sImg, thresh_lum_spectralon=20000)
 
-# Crop_image with plot
-
-PATH_OUT = PATH + file + '/'
-ext = '.hdr'  # '.hyspex'
-
-thresh_lum_spectralon_ = 8000
-crop_idx_dim1_ = 1200
-crop_image(PATH, PATH_OUT, file, ext, thresh_lum_spectralon=thresh_lum_spectralon_, crop_idx_dim1=crop_idx_dim1_,
-           band_step=20, apply_mask=True, force_creation=True)
-
-file = 'grain1'
-img = sp.open_image(PATH_OUT + file + ext)
-print(img.shape)
-img0 = img[:, :, 5]
-plt.imshow(img0, cmap='gray')
-plt.show()
 
 """
+Example to crop a single image
+"""
+# from crop_img import *
+# PATH = "D:\\Etude technique\\"
+# file = 'var1-x75y20_7000_us_2x_2021-10-19T160916_corr'
+# PATH_OUT = PATH + file + '\\'
+# ext = '.hdr'  # '.hyspex'
+# crop_image(PATH, PATH_OUT, file, ext, band_step=108, force_creation=True, apply_mask=True)
 
-use_path_ = "D:\\Etude technique"
 
-df_path = load(use_path_)
-# print(df_path.columns)
-# print(df_path)
+"""
+Automatically detect and extract grain into a subfolder called 'csv' given a band step
+"""
+# from crop_img import *
+# use_path_ = "D:\\Etude technique"
+# crop_all_images(use_path_, band_step_=72, verbose=False)
 
 
-# Create datasets
-train_set = CustomDataset(df_path)
-# valid_set = CustomDataset(df_path_valid)
-# test_set = CustomDataset(df_path_test)
+"""
+Extraction of features of all images. Retrieve and save max, min, mean, median, std into a 'csv' file
+"""
+# from extract_features import *
+# path_in = "D:\\Etude technique"
+# extract_all_features(path_in)
 
-# Create data loaders
-batch_size = 32
-trainloader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
-for files, labels in trainloader:
-    print(files)
-    print("LABELS :", labels)
-# validloader = DataLoader(valid_set, batch_size = batch_size, shuffle = True)
-# testloader = DataLoader(test_set, batch_size = batch_size, shuffle = True)
+
+"""
+Display of an image with 8 graphs given a parameter (max, min, mean, median, std) to compare reflectances
+"""
+# from extract_features import *
+# path_in = "D:\\Etude technique"
+# display_features(path_in, "mean", nb_grain_figure=0)
+
+"""
+Same as previously but with a boxplot
+"""
+# from extract_features import *
+# path_in = "D:\\Etude technique"
+# display_boxplot(path_in)
+
+"""
+Get the boxplot to compare size of grain for each image
+"""
+# from crop_img import *
+# use_path_ = "D:\\Etude technique"
+# get_grain_size(use_path_)
+
+
+"""
+Deep learning training, testing, saving model (optimizer and loss directly define inside the function)
+"""
+# from deep_learning import *
+#
+# use_path = "D:\\Etude technique\\21_bands\\"
+# learning_rate = 1e-4
+# epochs = 20
+# weight_loss = [2., 2.]
+#
+# main_loop(use_path, weight_loss, learning_rate, epochs=epochs, batch_size=12)
+
+

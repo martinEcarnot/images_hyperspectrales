@@ -337,19 +337,34 @@ def display_save_figure(figure_path, list_accu_train, list_accu_valid, list_loss
     fig.savefig(os.path.join(figure_path, name_figure+".png"), dpi=200, format='png')
 
 
-def main_loop(use_path, model, loss_fn, optimizer, name_figure, device, epochs=20, batch_size=12):
+def main_loop(use_path, weight_loss, learning_rate, epochs=20, batch_size=12):
     """
     Main to train a model given a certain number of epoch, a loss and an optimizer
 
     :param use_path: Path where the folder train, valid and test are located
-    :param model: model to train
-    :param loss_fn: loss used
-    :param optimizer: optimizer for the gradient
-    :param name_figure: name to give to the figure
-    :param device: cpu or cuda
+    :param weight_loss: the weight to consider for each class
+    :param learning_rate: Value for the exploration
     :param epochs: number of epochs used for training
     :param batch_size: number of image to process before updating parameters
     """
+    # Detection number of bands
+    use_path_train = os.path.join(use_path, "train", "")
+    path_band = os.path.join(use_path_train, os.listdir(use_path_train)[0])
+    file_band = [x for x in os.listdir(path_band) if "hdr" in x][0]
+    image_band = sp.open_image(os.path.join(path_band, file_band))
+    dim_in = image_band.shape[2]
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = CNN(dim_in).to(device)
+
+    weight = torch.tensor(weight_loss).to(device)
+    loss_fn = nn.CrossEntropyLoss(weight=weight)
+    # loss_fn = nn.BCELoss()
+    optimizer = Adam(model.parameters(), lr=learning_rate)
+
+    name_file = input("Enter the name of the figure to save (it should contain which images are "
+                      "selected to do the training, validation and testing): ")
+
     train_path = os.path.join(use_path, "train", "")
     valid_path = os.path.join(use_path, "valid", "")
     test_path = os.path.join(use_path, "test", "")
@@ -380,12 +395,12 @@ def main_loop(use_path, model, loss_fn, optimizer, name_figure, device, epochs=2
         list_loss_train.append(train_loss.item())  # Apparently tensor
         list_loss_valid.append(valid_loss)
 
-    use_path_model = os.path.join(use_path, "model_" + name_figure + ".pth")
+    use_path_model = os.path.join(use_path, "model_" + name_file + ".pth")
     print("\nSaving model at ", use_path_model)
     save_model(model, use_path_model)
 
-    print("\nDisplay graphs of accuracy and loss and save figure at ", os.path.join(use_path, name_figure+'.png'))
-    display_save_figure(use_path, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid, name_figure)
+    print("\nDisplay graphs of accuracy and loss and save figure at ", os.path.join(use_path, name_file+'.png'))
+    display_save_figure(use_path, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid, name_file)
 
     print("\nTesting model")
     test_accu, test_loss = test_model(test_loader, device, model=model, loss_fn=loss_fn)
@@ -393,34 +408,10 @@ def main_loop(use_path, model, loss_fn, optimizer, name_figure, device, epochs=2
     # Saving values
     print("\nSaving values of train, validation and test loops")
     save_array = np.asarray([list_accu_train, list_accu_valid, list_loss_train, list_loss_valid])
-    np.savetxt(os.path.join(use_path, name_figure+"_values_train_valid.csv"), save_array,
+    np.savetxt(os.path.join(use_path, name_file+"_values_train_valid.csv"), save_array,
                delimiter=",", fmt='%.5e')  # Train
-    np.savetxt(os.path.join(use_path, name_figure+"_values_test.csv"), np.asarray([[test_accu], [test_loss]]),
+    np.savetxt(os.path.join(use_path, name_file+"_values_test.csv"), np.asarray([[test_accu], [test_loss]]),
                delimiter=",", fmt='%.5e')  # Test
 
     print("\nDone!")
 
-
-# use_path = "E:\\Etude technique\\raw\\"
-use_path = "D:\\Etude technique\\21_bands\\"
-
-learning_rate = 1e-4
-
-# Detection number of bands
-use_path_train = os.path.join(use_path, "train", "")
-path_band = os.path.join(use_path_train, os.listdir(use_path_train)[0])
-file_band = [x for x in os.listdir(path_band) if "hdr" in x][0]
-image_band = sp.open_image(os.path.join(path_band, file_band))
-dim_in = image_band.shape[2]
-
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-model = CNN(dim_in).to(device)
-weight = torch.tensor([2., 2.]).to(device)
-loss_fn = nn.CrossEntropyLoss(weight=weight)
-# loss_fn = nn.BCELoss()
-optimizer = Adam(model.parameters(), lr=learning_rate)
-epochs = 20
-name_file = input("Enter the name of the figure to save (it should contain which images are "
-                  "selected to do the training, validation and testing): ")
-main_loop(use_path, model, loss_fn, optimizer, name_file, device, epochs=epochs, batch_size=12)
