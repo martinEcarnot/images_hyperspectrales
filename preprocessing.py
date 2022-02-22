@@ -179,7 +179,7 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1300, thresh_refl=0.15, area
         labeled_array_bar = label(binary_image_bar)
         regions_bar = regionprops(labeled_array_bar)
         # + 3000 to remove partial grains (bbox can include sliced grains)
-        list_regions_bar = np.array([x for x in regions_bar if x.area >= area_range + 3000 and x.solidity > 0.9])
+        list_regions_bar = np.array([x for x in regions_bar if 12000 >= x.area >= area_range + 3000 and x.solidity > 0.9])
         array_bbox_bar_res = np.array([x.bbox for x in list_regions_bar])
 
         # Creation of the mask for each grain by using the convex_image

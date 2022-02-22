@@ -1,12 +1,14 @@
-# Global import
-import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import os
 from os import walk
 import spectral as sp
 import torch
 import torch.nn as nn
+from matplotlib import pyplot as plt
+from torch.optim import Adam
 from torch.utils.data import Dataset, DataLoader
+from sklearn.metrics import classification_report
 
 
 def load(use_path):
@@ -51,6 +53,10 @@ class CustomDataset(Dataset):
         self.labels = df_path["class"]
 
     def __len__(self):
+        """
+        Function used by the Dataset to retrieve the size
+        :return: len of the dataframe
+        """
         return len(self.paths_hdr)
 
     def __getitem__(self, idx):
@@ -59,22 +65,26 @@ class CustomDataset(Dataset):
         :param idx: indice to select the path in the list
         :return: tensor, label
         """
-        label = self.labels[idx]
-        if label == '1':
-            label = torch.tensor([1, 0])
-        else:
-            label = torch.tensor([0, 1])
+        class_int = int(self.labels[idx])
+        label = 0 if class_int == 1 else 1  # Can be improve for random couple of classes
         # path_img = self.paths_img[idx]
         path_hdr = self.paths_hdr[idx]
         img = sp.open_image(path_hdr)
         img_tensor = torch.tensor(img[:, :, :])
-
-        return img_tensor, label
+        # Use "[img_tensor, torch.tensor(label)], torch.tensor(label)" for multiple input (example)
+        return img_tensor, torch.tensor(label)
 
 
 class CNN(nn.Module):
+    """
+    Creation of the neural network
+    """
 
     def __init__(self, dim_in):
+        """
+        Initialisation of the layers
+        :param dim_in: dimension of the input image
+        """
         super().__init__()
         # 4 conv blocks / flatten / linear / softmax
 
@@ -99,22 +109,29 @@ class CNN(nn.Module):
         self.relu = nn.ReLU()
         self.tanh = nn.Tanh()
         self.flatten = nn.Flatten()
-        self.linear1 = nn.Linear(2*2*320, 30)
+        self.linear1 = nn.Linear(2 * 2 * 320, 30)
         self.dropout = nn.Dropout(0.2)
         # self.linear2 = nn.Linear(20, 20)
         self.linear3 = nn.Linear(30, 2)
+        # For multiple input: 30 + number of input (1 here)
+        # self.linear3 = nn.Linear(31, 2)
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, input_data):
+        """
+        Order of the layers
+        :param input_data: Input image
+        :return: a tensor of size (1, 2) (Softmax)
+        """
+        # If multiple input:
+        # image, variete = input_data[0], input_data[1]
         x = self.relu(self.conv1_0(input_data))
         x = self.pool(self.relu(self.conv1_1(x)))
         # print("x.shape 1: ", x.shape)
 
         x = self.pool(self.relu(self.conv2_1(x)))
-
         x = self.relu(self.conv3_1(x))
         x = self.pool(self.relu(self.conv3_2(x)))
-        #
         x = self.relu(self.conv4_1(x))
         x = self.pool(self.relu(self.conv4_2(x)))
         # print("x.shape 4: ", x.shape)
@@ -124,24 +141,218 @@ class CNN(nn.Module):
         x = self.linear1(x)
         x = self.dropout(x)
         x = self.relu(x)
+        # Add another input
+        # x = torch.cat((variete[..., None], x), -1)
         x = self.linear3(x)
-        x = self.dropout(x)
         x = self.softmax(x)
         return x
 
-# use_path_train = "E:\\Etude technique\\raw\\train"
-# use_path_test = "E:\\Etude technique\\raw\\test"
-# use_path_model = "E:\\Etude technique\\model.pth"
+
+def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, verbose=False):
+    """
+    Loop to train the deep learning model.
+
+    :param train_loader: Dataloader of the training dataset
+    :param val_loader: Dataloader of the validation dataset
+    :param device: cpu or cuda
+    :param model: the CNN model
+    :param loss_fn: the loss to consider
+    :param optimizer: optimizer (Adam)
+    :param verbose: Set to True to display the model parameters and information during training
+    :return: The trained model, accuracy training, accuracy validation, train_loss, valid_loss
+    """
+    if verbose:
+        # from torchsummary import summary
+        print(model)
+        # summary(model, input_size=(21, 200, 200))  # 21 = nb_bands
+    exit()
+    train_loss, correct = 0, 0
+    size_train = len(train_loader.dataset)
+    size_valid = len(val_loader.dataset)
+    num_batches_train = len(train_loader)
+    num_batches_valid = len(val_loader)
+
+    # List to stock y and y pred to print a classification report
+    list_y_pred = []
+    list_y = []
+
+    for batch_num, (image, labels) in enumerate(train_loader):
+        model.train()
+
+        # Transfer Data to GPU if available
+        image, labels = image.to(device), labels.to(device)
+
+        image = image.permute(0, 3, 1, 2).float()
+
+        # Compute prediction error
+        output = model(image)
+        list_y_pred += output.argmax(1).tolist()
+        list_y += labels.tolist()
+        loss = loss_fn(output, labels)
+        train_loss += loss
+        correct += (output.argmax(1) == labels).type(torch.float).sum().item()
+
+        # Backpropagation
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        if verbose:
+            if batch_num % 5 == 0:
+                loss, current = loss.item(), batch_num * len(image)
+                print(f"loss: {loss:>7f}  [{current:>5d}/{size_train:>5d}]")
+
+    # Determination of other metrics (they are just print but can be retrieve as a dictionnary if necessary)
+    print(classification_report(list_y, list_y_pred, labels=np.unique(list_y_pred)))
+
+    # Validation
+    valid_loss, correct_valid = 0, 0
+    list_y_pred_val = []
+    list_y_val = []
+    model.eval()
+    for image_val, label_val in val_loader:
+
+        # Transfer Data to GPU if available
+        image_val, label_val = image_val.to(device), label_val.to(device)
+
+        image_val = image_val.permute(0, 3, 1, 2).float()
+
+        # Forward pass validation
+        target = model(image_val)
+        # Classification report
+        list_y_pred_val += target.argmax(1).tolist()
+        list_y_val += label_val.tolist()
+        # Loss validation
+        loss = loss_fn(target, label_val)
+        # Calculate Loss
+        valid_loss += loss.item()
+        correct_valid += (target.argmax(1) == label_val).type(torch.float).sum().item()
+
+    print(classification_report(list_y_val, list_y_pred_val, labels=np.unique(list_y_pred_val)))
+
+    train_loss /= num_batches_train
+    valid_loss /= num_batches_valid
+    correct /= size_train
+    correct_valid /= size_valid
+    print(f"Results : \t Accuracy Train: {(100 * correct):>0.1f}% \t Avg loss Train: {train_loss:>8f} \t Accuracy "
+          f"Validation: {(100 * correct_valid):>0.1f}% \t Avg loss Validation: {valid_loss:>8f}")
+
+    return model, correct, correct_valid, train_loss, valid_loss
 
 
-use_path_train = "D:\\Etude technique\\train"
-use_path_test = "D:\\Etude technique\\test"
-use_path_valid = "D:\\Etude technique\\valid"
-use_path_model = "D:\\Etude technique\\model.pth"
+def test_model(test_loader, device, model, loss_fn):
+    """
+    Apply the trained model to test dataset
+
+    :param test_loader: test dataloader
+    :param device: cpu or cuda
+    :param model: model to use (CNN)
+    :param loss_fn: the loss to consider
+    :return: Accuracy and loss of the test
+    """
+    size = len(test_loader.dataset)
+    num_batches = len(test_loader)
+    model.eval()
+    test_loss, correct = 0, 0
+    list_y_pred = []
+    list_y = []
+    with torch.no_grad():
+        for images, labels in test_loader:
+            images, labels = images.to(device), labels.to(device)
+            images = images.permute(0, 3, 1, 2).float()
+            output = model(images)
+            list_y_pred += output.argmax(1).tolist()
+            list_y += labels.tolist()
+            test_loss += loss_fn(output, labels).item()
+            correct += (output.argmax(1) == labels).type(torch.float).sum().item()
+    test_loss /= num_batches
+    correct /= size
+    print(f"Test : \n Accuracy: {(100 * correct):>0.1f}% \t Avg loss: {test_loss:>8f} \n")
+
+    # Determination of other metrics
+    print(classification_report(list_y, list_y_pred, labels=np.unique(list_y_pred)))
+    return 100*correct, test_loss
 
 
-def train_model(train_path, valid_path, verbose=False, show_result=True, epochs=20, batch_size=12):
-    print('training model')
+def save_model(model_, save_path):
+    """
+    Save the model to a given path
+    :param model_: Model to save
+    :param save_path: Path to use
+    """
+    torch.save(model_, save_path)
+
+
+def load_model(load_path):
+    """
+    Load a saved model
+    :param load_path: location of the model
+    :return: the model
+    """
+    model_ = torch.load(load_path)
+    return model_
+
+
+def display_save_figure(figure_path, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid, name_figure):
+    """
+    After the training is done, the results are displayed and saved
+
+    :param figure_path: path to save the figure and the data
+    :param list_accu_train: List of all accuracy during training
+    :param list_accu_valid: List of all accuracy during validation
+    :param list_loss_train: List of all loss during training
+    :param list_loss_valid: List of all loss during validation
+    :param name_figure: name to give to the figure
+    """
+    fig, axes = plt.subplots(ncols=2, figsize=(15, 7))
+    ax = axes.ravel()
+    list_nb = range(len(list_accu_train))
+    ax[0].plot(list_nb, list_accu_train, label='Train')
+    for a, b in zip(list_nb, list_accu_train):
+        ax[0].text(a, b, str(round(b, 1)))
+    ax[0].plot(list_nb, list_accu_valid, label='Valid')
+    for a, b in zip(list_nb, list_accu_valid):
+        ax[0].text(a, b, str(round(b, 1)))
+    ax[0].set_title('Accuracy given the epochs')
+    ax[0].set_xlabel('Epochs')
+    ax[0].set_ylabel('Accuracy (%)')
+    ax[0].legend()
+    ax[0].grid()
+
+    ax[1].plot(list_nb, list_loss_train, label='Train')
+    for a, b in zip(list_nb, list_loss_train):
+        ax[1].text(a, b, str(round(b, 2)))
+    ax[1].plot(list_nb, list_loss_valid, label='Valid')
+    for a, b in zip(list_nb, list_loss_valid):
+        ax[1].text(a, b, str(round(b, 2)))
+    ax[1].set_title('Loss given the epochs')
+    ax[1].set_xlabel('Epochs')
+    ax[1].set_ylabel('Loss')
+    ax[1].legend()
+    ax[1].grid()
+
+    fig.suptitle(name_figure)  # Global title
+    fig.tight_layout()
+    plt.show()
+    fig.savefig(os.path.join(figure_path, name_figure+".png"), dpi=200, format='png')
+
+
+def main_loop(use_path, model, loss_fn, optimizer, name_figure, device, epochs=20, batch_size=12):
+    """
+    Main to train a model given a certain number of epoch, a loss and an optimizer
+
+    :param use_path: Path where the folder train, valid and test are located
+    :param model: model to train
+    :param loss_fn: loss used
+    :param optimizer: optimizer for the gradient
+    :param name_figure: name to give to the figure
+    :param device: cpu or cuda
+    :param epochs: number of epochs used for training
+    :param batch_size: number of image to process before updating parameters
+    """
+    train_path = os.path.join(use_path, "train", "")
+    valid_path = os.path.join(use_path, "valid", "")
+    test_path = os.path.join(use_path, "test", "")
 
     df_path_train = load(train_path)
     train_set = CustomDataset(df_path_train)
@@ -151,154 +362,65 @@ def train_model(train_path, valid_path, verbose=False, show_result=True, epochs=
     val_set = CustomDataset(df_path_valid)
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    # Detection number of bands
-    for data in train_loader:
-        x_in, _ = data
-        dim_in = x_in.size()[3]
-        break
-
-    model = CNN(dim_in).to(device)
-    model = model.double()
-    optimizer = torch.optim.Adam(model.parameters())
-    criterion = nn.BCELoss()
-
-    if verbose:
-        print(model)
-
-    all_losses = []
-    all_accuracy = []
-    all_val_losses = []
-    all_val_accuracy = []
-
-    for epoch in range(epochs):
-        model.train()
-        losses, corrects, val_losses, val_corrects = [], 0, [], 0
-        nb_class_1 = 0
-        nb_class_2 = 0
-
-        for batch_num, input_data in enumerate(train_loader):
-            optimizer.zero_grad()
-            x, y = input_data
-            x = x.permute(0, 3, 1, 2)  # / 64
-
-            x = x.to(device).double()
-            y = y.to(device).double()
-
-            output = model(x)
-            correct, total, nb_0, nb_1 = 0, 0, 0, 0
-
-            for k in range(len(output)):
-                if float(output[k][0].item()) > float(output[k][1].item()):
-                    nb_class_1 += 1
-                    if int(y[k][0].item()) == 1:
-                        correct += 1
-                        corrects += 1
-                elif float(output[k][1].item()) >= float(output[k][0].item()):
-                    nb_class_2 += 1
-                    if int(y[k][1].item()) == 1:
-                        correct += 1
-                        corrects += 1
-                total += 1
-
-            loss = criterion(output, y)
-            loss.backward()
-            losses.append(loss.item())
-
-            optimizer.step()
-
-            if verbose:
-                if batch_num % 5 == 0:
-                    print('\tEpoch %d | Batch %d | Loss %6.2f | Accuracy %6.2f' % (
-                          epoch, batch_num, loss.item(), correct / total))
-        print(f"Class 1: {nb_class_1}, Class 2: {nb_class_2}")
-        model.eval()
-        for batch_num, input_data in enumerate(val_loader):
-            x, y = input_data
-            x = x.permute(0, 3, 1, 2)  # / 64
-
-            x = x.to(device).double()
-            y = y.to(device).double()
-
-            output = model(x)
-
-            for k in range(len(output)):
-                if float(output[k][0].item()) > float(output[k][1].item()):
-                    if int(y[k][0].item()) == 1:
-                        val_corrects += 1
-                elif float(output[k][1].item()) >= float(output[k][0].item()):
-                    if int(y[k][1].item()) == 1:
-                        val_corrects += 1
-
-            loss = criterion(output, y)
-            val_losses.append(loss.item())
-
-        print('Epoch %d | Loss %6.2f | Accuracy %6.2f | Val_Loss %6.2f | Val_Accuracy %6.2f' % (
-              epoch, sum(losses) / len(losses), corrects / len(train_set), sum(val_losses) / len(val_losses),
-              val_corrects / len(val_set)))
-        # print(output[0], y[0])
-        all_losses.append(sum(losses) / len(losses))
-        all_accuracy.append(corrects / len(train_set))
-        all_val_losses.append(sum(val_losses) / len(val_losses))
-        all_val_accuracy.append(val_corrects / len(val_set))
-
-    if show_result:
-        plt.plot(range(len(all_val_losses)), all_val_losses)
-        plt.plot(range(len(all_val_losses)), all_val_losses)
-        plt.show()
-        plt.plot(range(len(all_val_accuracy)), all_val_accuracy)
-        plt.plot(range(len(all_val_accuracy)), all_val_accuracy)
-        plt.show()
-
-    return model
-
-
-def test_model(model_, test_path, verbose=False, batch_size=12):
     df_path_test = load(test_path)
     test_set = CustomDataset(df_path_test)
-    testloader = DataLoader(test_set, batch_size=batch_size, shuffle=True, num_workers=0)
+    test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print('\nTraining model')
+    list_accu_train = []
+    list_accu_valid = []
+    list_loss_train = []
+    list_loss_valid = []
+    for t in range(epochs):
+        print(f"\nEpoch {t + 1}\n-------------------------------")
+        model, correct, correct_valid, train_loss, valid_loss = train_model(train_loader, val_loader, device, model=model,
+                                                                            loss_fn=loss_fn, optimizer=optimizer)
+        list_accu_train.append(correct*100)
+        list_accu_valid.append(correct_valid*100)
+        list_loss_train.append(train_loss.item())  # Apparently tensor
+        list_loss_valid.append(valid_loss)
 
-    model_.eval()
-    corrects, totals = 0, 0
-    nb_class_1 = 0
-    nb_class_2 = 0
+    use_path_model = os.path.join(use_path, "model_" + name_figure + ".pth")
+    print("\nSaving model at ", use_path_model)
+    save_model(model, use_path_model)
 
-    for batch_num, input_data in enumerate(testloader):
-        x, y = input_data
-        x = x.permute(0, 3, 1, 2)  # / 64
+    print("\nDisplay graphs of accuracy and loss and save figure at ", os.path.join(use_path, name_figure+'.png'))
+    display_save_figure(use_path, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid, name_figure)
 
-        x = x.to(device).double()
-        y = y.to(device).double()
+    print("\nTesting model")
+    test_accu, test_loss = test_model(test_loader, device, model=model, loss_fn=loss_fn)
 
-        output = model_(x)
+    # Saving values
+    print("\nSaving values of train, validation and test loops")
+    save_array = np.asarray([list_accu_train, list_accu_valid, list_loss_train, list_loss_valid])
+    np.savetxt(os.path.join(use_path, name_figure+"_values_train_valid.csv"), save_array,
+               delimiter=",", fmt='%.5e')  # Train
+    np.savetxt(os.path.join(use_path, name_figure+"_values_test.csv"), np.asarray([[test_accu], [test_loss]]),
+               delimiter=",", fmt='%.5e')  # Test
 
-        for k in range(len(output)):
-            if float(output[k][0].item()) > float(output[k][1].item()):
-                nb_class_1 += 1
-                if int(y[k][0].item()) == 1:
-                    corrects += 1
-            elif float(output[k][1].item()) >= float(output[k][0].item()):
-                nb_class_2 += 1
-                if int(y[k][1].item()) == 1:
-                    corrects += 1
-            totals += 1
-    print(f"Class 1: {nb_class_1}, Class 2: {nb_class_2}")
-    print('Test Accuracy %6.2f' % (corrects / totals))
+    print("\nDone!")
 
 
-def save_model(model_, save_path):
-    torch.save(model_, save_path)
+# use_path = "E:\\Etude technique\\raw\\"
+use_path = "D:\\Etude technique\\21_bands\\"
 
+learning_rate = 1e-4
 
-def load_model(load_path):
-    model_ = torch.load(load_path)
-    return model_
+# Detection number of bands
+use_path_train = os.path.join(use_path, "train", "")
+path_band = os.path.join(use_path_train, os.listdir(use_path_train)[0])
+file_band = [x for x in os.listdir(path_band) if "hdr" in x][0]
+image_band = sp.open_image(os.path.join(path_band, file_band))
+dim_in = image_band.shape[2]
 
-# model = train_model(use_path_train)
-# test_model(model, use_path_test)
-#
-# save_model(model, use_path_model)
-# print('Done')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+model = CNN(dim_in).to(device)
+weight = torch.tensor([2., 2.]).to(device)
+loss_fn = nn.CrossEntropyLoss(weight=weight)
+# loss_fn = nn.BCELoss()
+optimizer = Adam(model.parameters(), lr=learning_rate)
+epochs = 20
+name_file = input("Enter the name of the figure to save (it should contain which images are "
+                  "selected to do the training, validation and testing): ")
+main_loop(use_path, model, loss_fn, optimizer, name_file, device, epochs=epochs, batch_size=12)

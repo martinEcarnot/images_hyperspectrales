@@ -142,43 +142,59 @@ def crop_all_images(use_path, band_step_=20, crop_idx_dim1_=1300, apply_mask=Tru
         crop_image(path, path_out, filename, ext, crop_idx_dim1=crop_idx_dim1_, band_step=band_step_,
                    apply_mask=apply_mask, force_creation=force_creation, verbose=verbose)
 
-def get_grain_size(path_in, filename, k, crop_idx_dim1=1300, verbose=False):
-    arr_bbox, masks = preprocessing(path_in, filename, crop_idx_dim1=crop_idx_dim1, verbose=verbose)
 
-    all_sizes = []
-    for mask in masks:
-        size = sum(sum(mask))
-        all_sizes.append(size)
+def get_grain_size(path_in, crop_idx_dim1=1300, verbose=False):
+    """
+    Display the comparison between grain size of all images
 
-    print('len', len(all_sizes))
-    print('min', min(all_sizes))
-    print('max', max(all_sizes))
-    print('mean', statistics.mean(all_sizes))
-    print('stdev', np.std(all_sizes))
-    print('quantiles', statistics.quantiles(all_sizes))
-    print('\n')
+    :param path_in: path of the hyperspectral images
+    :param crop_idx_dim1: index of the edge of the graph paper
+    :param verbose: To display preprocessing figure
+    """
+    use_path = os.path.join(path_in, "")
+    all_files = next(walk(use_path), (None, None, []))[2]  # Detect only the files, not the folders
+    name_files = [x[:-4] for x in all_files if x[-3:] == "hdr"]  # Extract name files
 
+    names, size_boxplot = [""], []
 
-    # Creating plot
-    plt.subplot(1, 8, k + 1)
-    plt.boxplot(all_sizes)
-    plt.title(filename)
-    # plt.show()
+    for name in name_files:
+        print(name)
+        arr_bbox, masks = preprocessing(use_path, name, crop_idx_dim1=crop_idx_dim1, verbose=verbose)
 
-path_in = 'E:\\Etude Technique\\raw\\'
-path_out = path_in
-filename = ['var1-x73y14_7000_us_2x_2021-10-23T151946_corr',
-            'var1-x75y20_7000_us_2x_2021-10-19T160916_corr',
-            'var8-x74y17_7000_us_2x_2021-10-23T150719_corr',
-            'var8-x75y12_7000_us_2x_2021-10-20T113607_corr',
-            'x30y21-var1_11000_us_2x_2020-12-02T095609_corr',
-            'x32y23-var8_8000_us_2x_2020-12-02T155853_corr',
-            'x33y24-var1_11000_us_2x_2020-12-02T095946_corr',
-            'x34y21-var8_8000_us_2x_2020-12-02T142436_corr']
+        all_sizes = []
+        for mask in masks:
+            size = sum(sum(mask))
+            all_sizes.append(size)
+        size_boxplot.append(all_sizes)
 
-ext = 'hdr'
-for k in range(len(filename)):
-    print(filename[k])
-    get_grain_size(path_in, filename[k], k)
+        print('len', len(all_sizes))
+        print('min', min(all_sizes))
+        print('max', max(all_sizes))
+        print('mean', statistics.mean(all_sizes))
+        print('stdev', np.std(all_sizes))
+        print('quantiles', statistics.quantiles(all_sizes))
+        print('\n')
 
-plt.show()
+        # Determination of the year and the variety
+        variety = name.split("_")[0].split("-")
+        var = variety[0] if "var" in variety[0] else variety[1]
+        year = name.split("_")[-2].split("-")[0]
+        position = name.split("-")
+        pos_tmp = position[0] if "x" in position[0] else position[1]
+        pos_tmp = pos_tmp.split("_")
+        pos = pos_tmp[0] if "x" in pos_tmp[0] else pos_tmp[2]
+        names.append(f'{pos}_{var}_{year}')
+
+    plt.boxplot(size_boxplot)
+
+    list_nb = range(len(name_files)+1)
+
+    plt.xticks(list_nb, names)
+    plt.xticks(rotation=45, ha='right')
+    plt.xlabel('Name image')
+    plt.ylabel('Area (pixel)')
+    plt.title("Comparison sizes of grains per image")
+    plt.grid()
+    plt.tight_layout()
+    plt.show()
+
