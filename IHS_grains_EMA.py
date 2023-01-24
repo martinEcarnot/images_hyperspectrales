@@ -30,8 +30,9 @@ from skimage.measure import label, regionprops  # , regionprops_table
 import gzip
 import time
 
-# from gala import iterprogress
-# from gala import morpho
+
+from gala import iterprogress
+from gala import morpho
 
 t = time.time()
 # PATH of hyperspectral images

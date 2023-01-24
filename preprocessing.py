@@ -125,16 +125,17 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1300, thresh_refl=0.15, area
     :return: array of bbox of all grains, list of masks for all grains
     """
     img = sp.open_image(folder_path + s_img + '.hdr')
+    
 
     # Automatically detect the best band to do extraction where luminance is the highest
     # band, max_ref = brightest_band(img)
 
     # Reading of the CSV file if it exists, else creates it first
     try:
-        df = pd.read_csv(os.path.join(folder_path, "csv", 'brightest_bands.csv'), index_col=0)
+        df = pd.read_csv(folder_path + "/csv/brightest_bands.csv", index_col=0)
     except:
         retrieve_all_brightest_bands_to_csv(folder_path)
-        df = pd.read_csv(os.path.join(folder_path, "csv", 'brightest_bands.csv'), index_col=0)
+        df = pd.read_csv(folder_path + "/csv/brightest_bands.csv", index_col=0)
     band, max_ref = df.loc[s_img]
     band = int(band)
 
@@ -150,14 +151,20 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1300, thresh_refl=0.15, area
     # Grain detection and split close grains
     im1 = imr[:, crop_idx_dim1:]
     ret, binary_image = cv.threshold(im1, thresh_refl, 1, cv.THRESH_BINARY)
-    # show_image(binary_image)
+    show_image(binary_image)
 
     # Better result without morph_close
     # binary_image = cv.morphologyEx(binary_image, cv.MORPH_CLOSE, np.ones((10, 10), np.uint8))
 
     labeled_array = label(binary_image)
     regions = regionprops(labeled_array)
-
+    
+    #get centroids
+    coord_centroids = [region.centroid for region in regions if 
+                           12000 >= region.area >= area_range and region.solidity > 0.9]
+    print("Nombre de grains : " + str(len(coord_centroids)))
+    
+    
     list_bbox = [x.bbox for x in regions if 12000 >= x.area >= area_range and x.solidity > 0.9]
     # the max area find was around 11000. Two grains close can have a solidity > 0.9 so a upper bound must be set.
 
@@ -218,7 +225,7 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1300, thresh_refl=0.15, area
         plt.imshow(result, cmap="gray")
         plt.show()
 
-    return array_bbox, list_mask
+    return coord_centroids, array_bbox, list_mask
 
 
 def create_lists_areas(regions, area_range):
@@ -292,3 +299,8 @@ def watershed():
     new_img = watershed(binary_image)
     plt.imshow(new_img)
     plt.show()
+
+
+PATH = 'img/'
+file = 'var4_2020_x82y12_8000_us_2x_2022-04-27T093216_corr'
+preprocessing(PATH, file)

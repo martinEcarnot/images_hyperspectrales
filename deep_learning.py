@@ -165,7 +165,7 @@ def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, ver
         # from torchsummary import summary
         print(model)
         # summary(model, input_size=(21, 200, 200))  # 21 = nb_bands
-    exit()
+    #exit()
     train_loss, correct = 0, 0
     size_train = len(train_loader.dataset)
     size_valid = len(val_loader.dataset)
@@ -414,4 +414,5 @@ def main_loop(use_path, weight_loss, learning_rate, epochs=20, batch_size=12):
                delimiter=",", fmt='%.5e')  # Test
 
     print("\nDone!")
+
 

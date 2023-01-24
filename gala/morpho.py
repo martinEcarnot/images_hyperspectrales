@@ -22,7 +22,7 @@ from . import iterprogress as ip
 from skimage.segmentation import relabel_sequential
 from skimage import measure, util, feature
 import skimage.morphology
-
+import joblib
 
 zero3d = array([0, 0, 0])
 

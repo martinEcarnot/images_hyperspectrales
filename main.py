@@ -1,6 +1,6 @@
 
 """
-Retrieve the brightest band vor each image to do the detection
+Retrieve the brightest band for each image to do the detection
 """
 # from brightest_band import *
 # use_path = "D:\\Etude technique"
@@ -8,7 +8,8 @@ Retrieve the brightest band vor each image to do the detection
 
 
 """
-Function to save values of the spectralon for each band for the reflectance and save into a 'csv' folder
+Function to save values of the spectralon for each band for the reflectance and 
+save into a 'csv' folder
 """
 # from extract_features import *
 # path_in = "D:\\Etude technique"
@@ -21,7 +22,7 @@ Display and retrieve the image after the detection of bounding boxes and masks
 # PATH = "D:\\Etude technique\\"
 # sImg = "var8-x75y12_7000_us_2x_2021-10-20T113607_corr"
 # # sImg = "x30y21-var1_11000_us_2x_2020-12-02T095609_corr"
-# array_bbox_, masks = preprocessing(PATH, sImg, thresh_lum_spectralon=20000)
+# centroid_coord, array_bbox_, masks = preprocessing(PATH, sImg, thresh_lum_spectralon=20000)
 
 
 """
@@ -74,7 +75,8 @@ Get the boxplot to compare size of grain for each image
 
 
 """
-Deep learning training, testing, saving model (optimizer and loss directly define inside the function)
+Deep learning training, testing, saving model (optimizer and loss directly 
+                                               defined inside the function)
 """
 # from deep_learning import *
 #

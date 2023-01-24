@@ -17,7 +17,7 @@ def extract_features(path_in, filename, ext, crop_idx_dim1=1300, verbose=False):
                     image with bbox if set to True
     """
     path_in = os.path.join(path_in, "")
-    arr_bbox, masks = preprocessing(path_in, filename, crop_idx_dim1=crop_idx_dim1, verbose=verbose)
+    _, arr_bbox, masks = preprocessing(path_in, filename, crop_idx_dim1=crop_idx_dim1, verbose=verbose)
 
     img = sp.open_image(path_in + filename + ext)
 
@@ -205,8 +205,8 @@ def display_boxplot(path_in, number_of_the_band=150):
         name.append(f'{pos}_{var}_{year}')
 
     # create stacked errorbars:
-    plt.errorbar(np.arange(8), mu, sigma, fmt='ok', lw=3)
-    plt.errorbar(np.arange(8), mu, [[mu_i - mini_i for mu_i, mini_i in zip(mu, mini)],
+    plt.errorbar(np.arange(len(npy_files)), mu, sigma, fmt='ok', lw=3)
+    plt.errorbar(np.arange(len(npy_files)), mu, [[mu_i - mini_i for mu_i, mini_i in zip(mu, mini)],
                                     [maxi_i - mu_i for maxi_i, mu_i in zip(maxi, mu)]],
                  fmt='.k', ecolor='gray', lw=1)
     list_nb = range(len(sigma))

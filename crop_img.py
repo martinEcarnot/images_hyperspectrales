@@ -8,13 +8,13 @@ from tqdm import tqdm
 import os
 from os import walk
 import statistics
-
+import pandas as pd
 
 def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
                band_step=20, apply_mask=False, force_creation=False, verbose=True):
     """
-    Given an hyperspectral image, use the function preprocessing from preprocessing.py to retrieve bbox coordinates,
-    extract the hyperspectral image for each grain and save it in a particular folder.
+    Given an hyperspectral image, use the function preprocessing from preprocessing.py to retrieve 
+    bbox coordinates,extract the hyperspectral image for each grain and save it in a particular folder.
 
     :param path_in: path of the folder of the hyperspectral image
     :param path_out: path of the folder to save grain images (ex: path_in + filename + '/')
@@ -24,8 +24,8 @@ def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
     :param band_step: step between two wave bands ( if set to 2, takes one out of two bands)
     :param apply_mask: bool to apply convex mask to the grain in order to keep only the grain, no background
     :param force_creation: bool, if the file already exist, set to True to force the rewriting
-    :param verbose: Display the comparison between original image and the reflectance one and the original
-                    image with bbox if set to True
+    :param verbose: Display the comparison between original image and the reflectance one and the 
+                    original image with bbox if set to True
     """
     bool_file = 0
     # Creation of the folder if it doesn't exist
@@ -35,7 +35,7 @@ def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
 
     # By default, if the folder already exists, nothing is done
     if bool_file or force_creation:
-        arr_bbox, masks = preprocessing(path_in, filename, crop_idx_dim1=crop_idx_dim1, verbose=verbose)
+        coord_centroids, arr_bbox, masks = preprocessing(path_in, filename, crop_idx_dim1=crop_idx_dim1, verbose=verbose)
         # all_heights = []
         # all_widths = []
         # for k in range(len(arr_bbox)):
@@ -45,7 +45,9 @@ def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
         #     all_heights.append(height)
         # max_height = max(all_heights)
         # max_width = max(all_widths)
-
+        df_centroids = pd.DataFrame({'Index':[i for i in range(len(coord_centroids))], 
+                                     'Coord_centroid':coord_centroids})
+        df_centroids.to_csv(path_out + filename + '_centroids.csv')
         # Static max for the neural network to work
         max_height = 200
         max_width = 200
@@ -63,7 +65,6 @@ def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
         for k in tqdm(range(len(arr_bbox)), desc="Creating images"):
 
             box = arr_bbox[k]
-
             grain_img = img[box[1]:box[3], box[0]:box[2]].astype('float64')
             # Function built in the spectral library but as fast as the previous method
             # grain_img = np.array(img.read_subregion((box[1], box[3]), (box[0], box[2]), bands=None))
@@ -90,7 +91,7 @@ def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
                 else:
                     new_img[x1:x2, y1:y2, j] = new_grain
 
-            file_name = path_out + 'grain' + str(k) + '.hdr'
+            file_name = path_out + filename + '_grain' + str(k) + '.hdr'
             envi.save_image(file_name, new_img, force=True)
 
 
@@ -159,7 +160,7 @@ def get_grain_size(path_in, crop_idx_dim1=1300, verbose=False):
 
     for name in name_files:
         print(name)
-        arr_bbox, masks = preprocessing(use_path, name, crop_idx_dim1=crop_idx_dim1, verbose=verbose)
+        _, arr_bbox, masks = preprocessing(use_path, name, crop_idx_dim1=crop_idx_dim1, verbose=verbose)
 
         all_sizes = []
         for mask in masks:
