@@ -9,7 +9,8 @@ import matplotlib.patches as patches
 from brightest_band import retrieve_all_brightest_bands_to_csv
 from tqdm import tqdm
 import pandas as pd
-
+from display_image import band_brigthness
+import cv2
 
 def show_image(img):
     """
@@ -124,7 +125,8 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1300, thresh_refl=0.15, area
     :param verbose: display the image with bbox
     :return: array of bbox of all grains, list of masks for all grains
     """
-    img = sp.open_image(folder_path + s_img + '.hdr')
+    img_init = sp.open_image(folder_path + s_img + '.hdr')
+    img = img_init
     
 
     # Automatically detect the best band to do extraction where luminance is the highest
@@ -139,7 +141,6 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1300, thresh_refl=0.15, area
     band, max_ref = df.loc[s_img]
     band = int(band)
 
-    # print('band: ', band, 'Value: ', max_ref)
     thresh_lum_spectralon = max_ref * 0.7
 
     img = np.array(img.read_band(band), dtype=np.float64)
@@ -154,7 +155,6 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1300, thresh_refl=0.15, area
     show_image(binary_image)
 
     # Better result without morph_close
-    # binary_image = cv.morphologyEx(binary_image, cv.MORPH_CLOSE, np.ones((10, 10), np.uint8))
 
     labeled_array = label(binary_image)
     regions = regionprops(labeled_array)
@@ -190,7 +190,6 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1300, thresh_refl=0.15, area
         array_bbox_bar_res = np.array([x.bbox for x in list_regions_bar])
 
         # Creation of the mask for each grain by using the convex_image
-        # list_mask.append(create_mask(im_bar, array_bbox_bar_res, list_regions_bar))  # First solution
         for x in list_regions_bar:
             mask = x.convex_image.astype(np.uint8)
             list_mask.append(mask)
@@ -203,7 +202,7 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1300, thresh_refl=0.15, area
             array_bbox_bar_res[i][3] = array_bbox_bar_res[i][3] + list_bbox_bar[ind][1]
         list_bar = [*list_bar, *array_bbox_bar_res]  # Full list with all bbox
 
-    # list_bbox = list_bar
+    
     list_bbox = [*list_bbox, *list_bar]
     array_bbox = np.array(list_bbox)
 
@@ -213,21 +212,22 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1300, thresh_refl=0.15, area
         array_bbox[i][3] = array_bbox[i][3] + crop_idx_dim1
 
     # Display
-    x_max = 9000 
-    y_max = 2400
+    img_r = img_init[:, :, 22] / band_brigthness(img_init, 22)
+    img_g = img_init[:, :, 53] / band_brigthness(img_init, 53)
+    img_b = img_init[:, :, 89] / band_brigthness(img_init, 89)
+    img_fin = np.fliplr(cv2.rotate(np.dstack((img_b, img_g, img_r)), cv2.ROTATE_90_CLOCKWISE))
     
     if verbose:
         fig, ax = plt.subplots()
         ax.xaxis.tick_top()
-        result = img
-        ax.imshow(result)
+        ax.imshow(img_fin)
         for i in range(len(array_bbox)):
             x1, y1, x2, y2 = array_bbox[i]
             yc, xc = coord_centroids[i]
-            ax.add_patch(patches.Rectangle((y1, x1), y2 - y1, x2 - x1, fill=False, edgecolor='red', lw=2))
-            plt.text(y2, x1, "{},\n{}".format(int(yc), int(xc + crop_idx_dim1)), 
-                     bbox={'facecolor':'r'}, ha="left", va="bottom", fontsize = 6)
-        plt.imshow(result, cmap="gray")
+            ax.add_patch(patches.Rectangle((y1, x1), y2 - y1, x2 - x1, fill=False, edgecolor='blue', lw=2))
+            plt.text(y2, x1, "{},\n({}, {})".format(i, int(yc), int(xc + crop_idx_dim1)), 
+                     bbox={'facecolor':'b'}, ha="left", va="bottom", fontsize = 6, color = 'w')
+        plt.imshow(img_fin)
         plt.show()
 
     return coord_centroids, array_bbox, list_mask
@@ -293,7 +293,6 @@ def watershed():
     # Grain detection and split close grains
     im1 = imr[:, colmin:]
     ret, binary_image = cv.threshold(im1, 0.15, 1, cv.THRESH_BINARY)
-    # show_image(binary_image)
 
     # Watershed part
 

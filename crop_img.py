@@ -11,7 +11,7 @@ import statistics
 import pandas as pd
 
 def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
-               band_step=20, apply_mask=False, force_creation=False, verbose=True):
+               band_step=20, apply_mask=False, force_creation=False, verbose=True, sillon = True, liste_grains_defauts = []):
     """
     Given an hyperspectral image, use the function preprocessing from preprocessing.py to retrieve 
     bbox coordinates,extract the hyperspectral image for each grain and save it in a particular folder.
@@ -37,8 +37,7 @@ def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
     if bool_file or force_creation:
         coord_centroids, arr_bbox, masks = preprocessing(path_in, filename, crop_idx_dim1=crop_idx_dim1, verbose=verbose)
     
-        df_centroids = pd.DataFrame({'Index':[i for i in range(len(coord_centroids))], 
-                                     'Coord_centroid':coord_centroids})
+        df_centroids = pd.DataFrame({'Coord_centroid':coord_centroids})  #, 'Class' : liste_labels
         df_centroids.to_csv(path_out + filename + '_centroids.csv')
         # Static max for the neural network to work
         max_height = 200
@@ -50,7 +49,6 @@ def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
         n_bands = 216 // band_step
 
         # Retrieve values to convert grain image to reflectance
-        # array_ref = reflectance_grain(img, crop_idx_dim1-350, band_step)  # -350 to remove graph paper
         array_ref = np.genfromtxt(os.path.join(path_in, "csv", "lum_spectralon_" + filename + ".csv"), delimiter=',')
 
         # Loop over all bbox detected with a smart progress meter (tqdm)
@@ -59,7 +57,6 @@ def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
             box = arr_bbox[k]
             grain_img = img[box[1]:box[3], box[0]:box[2]].astype('float64')
             # Function built in the spectral library but as fast as the previous method
-            # grain_img = np.array(img.read_subregion((box[1], box[3]), (box[0], box[2]), bands=None))
 
             w, h = grain_img.shape[0], grain_img.shape[1]
 

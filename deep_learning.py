@@ -67,11 +67,11 @@ class CustomDataset(Dataset):
         """
         class_int = int(self.labels[idx])
         label = 0 if class_int == 1 else 1  # Can be improve for random couple of classes
-        # path_img = self.paths_img[idx]
+       
         path_hdr = self.paths_hdr[idx]
         img = sp.open_image(path_hdr)
         img_tensor = torch.tensor(img[:, :, :])
-        # Use "[img_tensor, torch.tensor(label)], torch.tensor(label)" for multiple input (example)
+       
         return img_tensor, torch.tensor(label)
 
 
@@ -114,7 +114,7 @@ class CNN(nn.Module):
         # self.linear2 = nn.Linear(20, 20)
         self.linear3 = nn.Linear(30, 2)
         # For multiple input: 30 + number of input (1 here)
-        # self.linear3 = nn.Linear(31, 2)
+        
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, input_data):
@@ -124,7 +124,7 @@ class CNN(nn.Module):
         :return: a tensor of size (1, 2) (Softmax)
         """
         # If multiple input:
-        # image, variete = input_data[0], input_data[1]
+        
         x = self.relu(self.conv1_0(input_data))
         x = self.pool(self.relu(self.conv1_1(x)))
         # print("x.shape 1: ", x.shape)
@@ -134,15 +134,14 @@ class CNN(nn.Module):
         x = self.pool(self.relu(self.conv3_2(x)))
         x = self.relu(self.conv4_1(x))
         x = self.pool(self.relu(self.conv4_2(x)))
-        # print("x.shape 4: ", x.shape)
-        # exit()
+        
 
         x = self.flatten(x)
         x = self.linear1(x)
         x = self.dropout(x)
         x = self.relu(x)
         # Add another input
-        # x = torch.cat((variete[..., None], x), -1)
+        
         x = self.linear3(x)
         x = self.softmax(x)
         return x
@@ -165,7 +164,7 @@ def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, ver
         # from torchsummary import summary
         print(model)
         # summary(model, input_size=(21, 200, 200))  # 21 = nb_bands
-    #exit()
+   
     train_loss, correct = 0, 0
     size_train = len(train_loader.dataset)
     size_valid = len(val_loader.dataset)
@@ -359,7 +358,6 @@ def main_loop(use_path, weight_loss, learning_rate, epochs=20, batch_size=12):
 
     weight = torch.tensor(weight_loss).to(device)
     loss_fn = nn.CrossEntropyLoss(weight=weight)
-    # loss_fn = nn.BCELoss()
     optimizer = Adam(model.parameters(), lr=learning_rate)
 
     name_file = input("Enter the name of the figure to save (it should contain which images are "
