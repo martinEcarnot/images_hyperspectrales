@@ -213,15 +213,20 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1300, thresh_refl=0.15, area
         array_bbox[i][3] = array_bbox[i][3] + crop_idx_dim1
 
     # Display
+    x_max = 9000 
+    y_max = 2400
+    
     if verbose:
         fig, ax = plt.subplots()
         ax.xaxis.tick_top()
         result = img
         ax.imshow(result)
-
-        for bbox in array_bbox:
-            x1, y1, x2, y2 = bbox
+        for i in range(len(array_bbox)):
+            x1, y1, x2, y2 = array_bbox[i]
+            yc, xc = coord_centroids[i]
             ax.add_patch(patches.Rectangle((y1, x1), y2 - y1, x2 - x1, fill=False, edgecolor='red', lw=2))
+            plt.text(y2, x1, "{},\n{}".format(int(yc), int(xc + crop_idx_dim1)), 
+                     bbox={'facecolor':'r'}, ha="left", va="bottom", fontsize = 6)
         plt.imshow(result, cmap="gray")
         plt.show()
 

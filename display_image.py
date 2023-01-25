@@ -90,5 +90,5 @@ file = "var4_2020_x82y12_8000_us_2x_2022-04-27T093216_corr"
 #file = "cropped/var4_2020_x82y12_8000_us_2x_2022-04-27T093216_corr_grain25"
 
 
-display_single_band(PATH, file, 103)
-#display_img(PATH, file)
+#display_single_band(PATH, file, 103)
+display_img(PATH, file)
