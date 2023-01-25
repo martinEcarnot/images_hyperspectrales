@@ -36,15 +36,7 @@ def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
     # By default, if the folder already exists, nothing is done
     if bool_file or force_creation:
         coord_centroids, arr_bbox, masks = preprocessing(path_in, filename, crop_idx_dim1=crop_idx_dim1, verbose=verbose)
-        # all_heights = []
-        # all_widths = []
-        # for k in range(len(arr_bbox)):
-        #     width = arr_bbox[k][3] - arr_bbox[k][1]
-        #     height = arr_bbox[k][2] - arr_bbox[k][0]
-        #     all_widths.append(width)
-        #     all_heights.append(height)
-        # max_height = max(all_heights)
-        # max_width = max(all_widths)
+    
         df_centroids = pd.DataFrame({'Index':[i for i in range(len(coord_centroids))], 
                                      'Coord_centroid':coord_centroids})
         df_centroids.to_csv(path_out + filename + '_centroids.csv')

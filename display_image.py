@@ -60,7 +60,6 @@ def display_img(path_in, filename):
 
 def display_single_band(path_in, filename, selected_bands):
     a = time.time()
-
     img = sp.open_image(path_in + filename + '.hdr')
     
     # Normalizing each band regarding the mean brigthness of the spectralon
