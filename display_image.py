@@ -84,10 +84,10 @@ def display_single_band(path_in, filename, selected_bands):
 PATH = 'img/'
 #file = "var1_2020_x75y20_8000_us_2x_2022-04-26T122543_corr"
 #file = "var1_2020_x75y20_8000_us_2x_2022-04-26T130045_corr"
-file = "var4_2020_x82y12_8000_us_2x_2022-04-27T093216_corr"
+#file = "var4_2020_x82y12_8000_us_2x_2022-04-27T093216_corr"
 #file = "var4_2020_x82y12_8000_us_2x_2022-04-27T092007_corr"
-#file = "cropped/var4_2020_x82y12_8000_us_2x_2022-04-27T093216_corr_grain25"
+file = "cropped/var4_2020_x82y12_8000_us_2x_2022-04-27T093216_corr_grain25"
 
 
-#display_single_band(PATH, file, 103)
-display_img(PATH, file)
+#display_single_band(PATH, file, 2)
+#display_img(PATH, file)

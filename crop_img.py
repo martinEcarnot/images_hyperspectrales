@@ -36,13 +36,18 @@ def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
     # By default, if the folder already exists, nothing is done
     if bool_file or force_creation:
         coord_centroids, arr_bbox, masks = preprocessing(path_in, filename, crop_idx_dim1=crop_idx_dim1, verbose=verbose)
-    
-        df_centroids = pd.DataFrame({'Coord_centroid':coord_centroids})  #, 'Class' : liste_labels
+        
+        labels = []
+        for i in range(len(coord_centroids)):
+            labels.append(2 if i in liste_grains_defauts else int(sillon))
+        
+        df_centroids = pd.DataFrame({'Coord_centroid':coord_centroids, 'Label' : labels})  #, 'Class' : liste_labels
         df_centroids.to_csv(path_out + filename + '_centroids.csv')
         # Static max for the neural network to work
         max_height = 200
         max_width = 200
-
+        
+        
         img = sp.open_image(path_in + filename + ext)
 
         # The number of band is considered as a static number, 216

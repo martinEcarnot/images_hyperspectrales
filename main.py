@@ -87,4 +87,11 @@ Deep learning training, testing, saving model (optimizer and loss directly
 #
 # main_loop(use_path, weight_loss, learning_rate, epochs=epochs, batch_size=12)
 
+from preprocessing import *
 
+Path = 'img/'
+file = "var1_2020_x75y20_8000_us_2x_2022-04-26T122543_corr"
+#file = "var1_2020_x75y20_8000_us_2x_2022-04-26T130045_corr"
+#file = "var4_2020_x82y12_8000_us_2x_2022-04-27T092007_corr"
+#file = 'var4_2020_x82y12_8000_us_2x_2022-04-27T093216_corr'
+preprocessing(Path, file)
