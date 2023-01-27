@@ -69,7 +69,7 @@ Same as previously but with a boxplot
 """
 Get the boxplot to compare size of grain for each image
 """
-# from crop_img import *
+from crop_img import *
 # use_path_ = "D:\\Etude technique"
 # get_grain_size(use_path_)
 
@@ -94,4 +94,7 @@ file = "var1_2020_x75y20_8000_us_2x_2022-04-26T122543_corr"
 #file = "var1_2020_x75y20_8000_us_2x_2022-04-26T130045_corr"
 #file = "var4_2020_x82y12_8000_us_2x_2022-04-27T092007_corr"
 #file = 'var4_2020_x82y12_8000_us_2x_2022-04-27T093216_corr'
-preprocessing(Path, file)
+#preprocessing(Path, file)
+
+crop_image(Path, Path + 'cropped/', file, ext = '.hdr', force_creation=True, 
+           sillon = True, liste_grains_defauts = [0, 1, 15, 31, 52, 53, 55, 59, 67])

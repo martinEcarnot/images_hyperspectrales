@@ -162,7 +162,6 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1300, thresh_refl=0.15, area
     #get centroids
     coord_centroids = [region.centroid for region in regions if 
                            12000 >= region.area >= area_range and region.solidity > 0.9]
-    print("Nombre de grains : " + str(len(coord_centroids)))
     
     
     list_bbox = [x.bbox for x in regions if 12000 >= x.area >= area_range and x.solidity > 0.9]
@@ -189,9 +188,11 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1300, thresh_refl=0.15, area
         # + 3000 to remove partial grains (bbox can include sliced grains)
         list_regions_bar = np.array([x for x in regions_bar if 12000 >= x.area >= area_range + 3000 and x.solidity > 0.9])
         
-        for j in list_regions_bar:
-            print(np.array(j.centroid) + np.array((list_bbox_bar[ind][0],
-                                                   list_bbox_bar[ind][1] + crop_idx_dim1)))
+        #Ajout des coordonnées des centroides des nouveaux grains détectés
+        for x in list_regions_bar:
+            coord_centroids.append((np.array(x.centroid) + np.array((list_bbox_bar[ind][0],
+                                                   list_bbox_bar[ind][1] + crop_idx_dim1))))
+            
             
         array_bbox_bar_res = np.array([x.bbox for x in list_regions_bar])
 
@@ -227,16 +228,15 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1300, thresh_refl=0.15, area
         fig, ax = plt.subplots()
         ax.xaxis.tick_top()
         ax.imshow(img_fin)
-        print("Nombre de bbox : " + str(len(array_bbox)))
       
         for i in range(len(array_bbox)):
             x1, y1, x2, y2 = array_bbox[i]
             
             ax.add_patch(patches.Rectangle((y1, x1), y2 - y1, x2 - x1, fill=False, edgecolor='blue', lw=2))
-            if i< len(coord_centroids):
-                yc, xc = coord_centroids[i]
-                plt.text(y2, x1, "{},\n({}, {})".format(i, int(yc), int(xc + crop_idx_dim1)), 
-                         bbox={'facecolor':'b'}, ha="left", va="bottom", fontsize = 6, color = 'w')
+           
+            yc, xc = coord_centroids[i]
+            plt.text(y2, x1, "{},\n({}, {})".format(i, int(yc), int(xc + crop_idx_dim1)), 
+                     bbox={'facecolor':'b'}, ha="left", va="bottom", fontsize = 6, color = 'w')
         plt.imshow(img_fin)
         plt.show()
 
