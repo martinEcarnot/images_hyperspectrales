@@ -90,11 +90,11 @@ Deep learning training, testing, saving model (optimizer and loss directly
 from preprocessing import *
 
 Path = 'img/'
-file = "var1_2020_x75y20_8000_us_2x_2022-04-26T122543_corr"
+#file = "var1_2020_x75y20_8000_us_2x_2022-04-26T122543_corr"
 #file = "var1_2020_x75y20_8000_us_2x_2022-04-26T130045_corr"
-#file = "var4_2020_x82y12_8000_us_2x_2022-04-27T092007_corr"
+file = "var4_2020_x82y12_8000_us_2x_2022-04-27T092007_corr"
 #file = 'var4_2020_x82y12_8000_us_2x_2022-04-27T093216_corr'
-#preprocessing(Path, file)
+preprocessing(Path, file)
 
-crop_image(Path, Path + 'cropped/', file, ext = '.hdr', force_creation=True, 
-           sillon = True, liste_grains_defauts = [0, 1, 15, 31, 52, 53, 55, 59, 67])
+#crop_image(Path, Path + 'cropped/', file, ext = '.hdr', force_creation=True, 
+           #sillon = True, liste_grains_defauts = [0, 1, 15, 31, 52, 53, 55, 59, 67])

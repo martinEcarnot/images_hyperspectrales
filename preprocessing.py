@@ -315,3 +315,11 @@ def watershed():
     plt.show()
 
 
+def list_csv_to_pd(liste, delimiter):
+    new_list = []
+    for j in liste :
+        if str(j)=='nan':
+            new_list.append(np.nan)
+        else:
+            new_list.append([int(i) for i in j.split(delimiter)])
+    return new_list
