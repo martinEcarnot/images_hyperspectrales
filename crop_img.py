@@ -11,7 +11,7 @@ import statistics
 import pandas as pd
 
 def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
-               band_step=20, apply_mask=False, force_creation=False, verbose=True, sillon = True, liste_grains_defauts = []):
+               band_step=20, apply_mask=False, force_creation=False, verbose=True, sillon = True, liste_grains_defauts = [], autre_cat = []):
     """
     Given an hyperspectral image, use the function preprocessing from preprocessing.py to retrieve 
     bbox coordinates,extract the hyperspectral image for each grain and save it in a particular folder.
@@ -39,7 +39,7 @@ def crop_image(path_in, path_out, filename, ext, crop_idx_dim1=1300,
         
         labels = []
         for i in range(len(coord_centroids)):
-            labels.append(2 if i in liste_grains_defauts else int(sillon))
+            labels.append(2 if i in liste_grains_defauts else int(sillon)^(i in autre_cat))
         
         df_centroids = pd.DataFrame({'Coord_centroid':coord_centroids, 'Label' : labels})  #, 'Class' : liste_labels
         df_centroids.to_csv(path_out + filename + '_centroids.csv')

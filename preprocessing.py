@@ -34,23 +34,27 @@ def reflectance(image, crop_idx_dim1, thresh_lum_spectralon, verbose=False):
     imr = np.empty(image.shape, np.float32)
 
     # Detect and extract spectralon
-    im0 = image[:, 1:crop_idx_dim1]
+    im0 = image[:, :crop_idx_dim1]
     ret0, binary_image0 = cv.threshold(im0, thresh_lum_spectralon, 1, cv.THRESH_BINARY)
     binary_image0 = cv.erode(binary_image0, np.ones((10, 10), np.uint8))
     binary_image0 = cv.morphologyEx(binary_image0, cv.MORPH_CLOSE, np.ones((20, 20), np.uint8))
-
+    
     # Conversion to reflectance: Essential for shape detection
     ref = np.zeros((image.shape[0]), image.dtype)
     for x in range(image.shape[0]):
         nz = binary_image0[x, :] != 0
+        
         if sum(nz) > 50:
-            ref[x] = np.mean(im0[x, nz], 0)
-            imr[x, :] = image[x, :] / ref[x]
+            ref[x] = np.mean(im0[x, nz])
+        else : 
+        #valeur prise au pif pour que la segmentation prenne en compte tous les grains,
+        #même ceux en partie au-dessus ou en-dessous du spectralon
+            ref[x] = 22000      
+        imr[x, :] = image[x, :] / ref[x]
 
     if verbose:
         fig, axes = plt.subplots(ncols=2, figsize=(9, 3))
         ax = axes.ravel()
-
         ax[0].imshow(image, cmap="gray")
         ax[0].set_title('Original image')
         ax[1].imshow(imr, cmap="gray")
@@ -61,6 +65,7 @@ def reflectance(image, crop_idx_dim1, thresh_lum_spectralon, verbose=False):
 
         fig.tight_layout()
         plt.show()
+    
     return imr
 
 

@@ -90,10 +90,12 @@ Deep learning training, testing, saving model (optimizer and loss directly
 from preprocessing import *
 
 Path = 'img/'
+Path = r'D:/EtudeTechnique_INRAE_IMAGES/'
 #file = "var1_2020_x75y20_8000_us_2x_2022-04-26T122543_corr"
 #file = "var1_2020_x75y20_8000_us_2x_2022-04-26T130045_corr"
-file = "var4_2020_x82y12_8000_us_2x_2022-04-27T092007_corr"
+#file = "var4_2020_x82y12_8000_us_2x_2022-04-27T092007_corr"
 #file = 'var4_2020_x82y12_8000_us_2x_2022-04-27T093216_corr'
+file = 'var7_x82y19_8000_us_2x_2022-04-26T084832_corr'
 preprocessing(Path, file)
 
 #crop_image(Path, Path + 'cropped/', file, ext = '.hdr', force_creation=True, 
