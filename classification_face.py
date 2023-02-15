@@ -57,15 +57,15 @@ class CNN(nn.Module):
         :param dim_in: dimension of the input image
         """
         super().__init__()
-        self.conv1 = nn.Conv2d(in_channels=dim_in, out_channels=dim_in*2, kernel_size=(5, 5),stride=(3,3))
-        self.conv2 = nn.Conv2d(in_channels=dim_in*2, out_channels=dim_in*4, kernel_size=(3, 3),stride=(2,2),padding=(2,2))
-        self.conv3 = nn.Conv2d(in_channels=dim_in*4, out_channels=dim_in*8, kernel_size=(3, 3),stride=(2, 2),padding=(2,2))
+        self.conv1 = nn.Conv2d(in_channels=dim_in, out_channels=10, kernel_size=(5, 5),stride=(3,3))
+        self.conv2 = nn.Conv2d(in_channels=10, out_channels=20, kernel_size=(3, 3),stride=(2,2),padding=(2,2))
+        self.conv3 = nn.Conv2d(in_channels=20, out_channels=50, kernel_size=(3, 3),stride=(2, 2),padding=(2,2))
 
         self.pool = nn.MaxPool2d(kernel_size=2)
         self.relu = nn.ReLU()
         self.tanh = nn.Tanh()
         self.flatten = nn.Flatten()
-        self.linear1 = nn.Linear(dim_in*8*3*3, 30)
+        self.linear1 = nn.Linear(50*3*3, 30)
         self.dropout = nn.Dropout(0.2)
         self.linear2 = nn.Linear(30, 3)
         self.softmax = nn.Softmax(dim=1)
