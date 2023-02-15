@@ -24,7 +24,6 @@ class CustomDataset(Dataset):
         :labels_type: name of the column containing the labels, here "Face" or "Species"
         """
         super().__init__()
-        # self.paths_img = df_path["img"]
         self.names_hdr = df_annot["Name_hdr"]
         self.annot_dir = annot_dir
         self.labels = df_annot[labels_type]
@@ -44,7 +43,6 @@ class CustomDataset(Dataset):
         """
         img = sp.open_image(self.annot_dir+self.names_hdr[idx])
         img_tensor = torch.tensor(img[:, :, :])
-        # Use "[img_tensor, torch.tensor(label)], torch.tensor(label)" for multiple input (example)
         return img_tensor, torch.tensor(self.labels[idx])
 
 
@@ -59,8 +57,6 @@ class CNN(nn.Module):
         :param dim_in: dimension of the input image
         """
         super().__init__()
-        # 4 conv blocks / flatten / linear / softmax
-
         self.conv1 = nn.Conv2d(in_channels=dim_in, out_channels=dim_in*2, kernel_size=(5, 5),stride=(3,3))
         self.conv2 = nn.Conv2d(in_channels=dim_in*2, out_channels=dim_in*4, kernel_size=(3, 3),stride=(2,2),padding=(2,2))
         self.conv3 = nn.Conv2d(in_channels=dim_in*4, out_channels=dim_in*8, kernel_size=(3, 3),stride=(2, 2),padding=(2,2))
@@ -78,9 +74,8 @@ class CNN(nn.Module):
         """
         Order of the layers
         :param input_data: Input image
-        :return: a tensor of size (1, 2) (Softmax)
+        :return: a tensor of size (1, number of classes) (Softmax)
         """
-        # If multiple input:
         x = self.pool(self.relu(self.conv1(input_data)))
         x = self.pool(self.relu(self.conv2(x)))
         x = self.pool(self.relu(self.conv3(x)))
@@ -91,9 +86,7 @@ class CNN(nn.Module):
         x = self.relu(x)
         x = self.linear2(x)
         x = self.softmax(x)
-        #print(x)
         return x
-
 
 def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, verbose=False, bands = [i for i in range(216)]):
     """
@@ -152,7 +145,7 @@ def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, ver
                 print(f"loss: {loss:>7f}  [{current:>5d}/{size_train:>5d}]")
 
     # Determination of other metrics (they are just print but can be retrieve as a dictionnary if necessary)
-    print(classification_report(list_y, list_y_pred, labels=np.unique(list_y_pred)))
+    print(classification_report(list_y, list_y_pred, labels=np.unique(list_y)))
 
     # Validation
     valid_loss, correct_valid = 0, 0
@@ -176,7 +169,7 @@ def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, ver
         # Calculate Loss
         valid_loss += loss.item()
         correct_valid += (target.argmax(1) == label_val).type(torch.float).sum().item()
-    print(classification_report(list_y_val, list_y_pred_val, labels=np.unique(list_y_pred_val)))
+    print(classification_report(list_y_val, list_y_pred_val, labels=np.unique(list_y_val)))
 
     train_loss /= num_batches_train
     valid_loss /= num_batches_valid
@@ -228,6 +221,46 @@ def test_model(test_loader, device, model, loss_fn, test_dir = 'img/cropped/', t
     print(classification_report(list_y, list_y_pred, labels=np.unique(list_y_pred)))
     return 100*correct, test_loss
 
+def summary_training(model,annot_dir,labels_type,weights_loss, learning_rate, epochs, batch_size, other_class, bands):
+    n_classes=0
+    if labels_type=='Face':
+        if other_class:
+            n_classes=3
+        else: 
+            n_classes=2
+    else:
+        n_classes=8
+    struct = summary(model,(batch_size,len(bands),200,200))
+
+    summary ="""
+    TASK
+    Directory used for annotations : {annot_dir}
+    Classification type : {labels_type}
+    Number of classes : {n_classes}
+    Bands used : {bands}
+    Number of bands : {n_bands}
+
+
+    MODEL'S HYPERPARAMETERS
+    Structure : 
+    {struct}
+
+
+    Number of epochs : {epochs}
+    Learning rate : {lr}
+    Batch size : {batch_size}
+    Classes' weights in the loss : {weights_loss}
+    """.format(
+        labels_type=labels_type,
+        n_classes=n_classes,
+        bands=bands,
+        n_bands=len(bands),
+        struct=struct,
+        epochs=epochs,
+        batch_size=batch_size, 
+        weights_loss=weights_loss
+    )
+    return summary
 
 def save_model(model_, save_path):
     """
@@ -292,13 +325,13 @@ def display_save_figure(fig_dir,fig_fn, list_accu_train, list_accu_valid, list_l
     fig.savefig(os.path.join(fig_dir, fig_fn+".png"), dpi=200, format='png')
 
 
-def main_loop(annot_dir, labels_type,weight_loss, learning_rate, epochs=20, batch_size=12, other_class = False, bands = [i for i in range(216)]):
+def main_loop(annot_dir, labels_type,weights_loss, learning_rate, epochs=20, batch_size=12, other_class = False, bands = [i for i in range(216)]):
     """
     Main to train a model given a certain number of epoch, a loss and an optimizer
 
     :param annot_dir: path to the directory of the annotations files
     :labels_type: name of the column containing the labels, here "Face" or "Species"
-    :param weight_loss: the weight to consider for each class
+    :param weights_loss: the weights to consider for each class
     :param learning_rate: Value for the exploration
     :param epochs: number of epochs used for training
     :param batch_size: number of image to process before updating parameters
@@ -308,7 +341,7 @@ def main_loop(annot_dir, labels_type,weight_loss, learning_rate, epochs=20, batc
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = CNN(dim_in).to(device)
 
-    weight = torch.tensor(weight_loss).to(device)
+    weight = torch.tensor(weights_loss).to(device)
     loss_fn = nn.CrossEntropyLoss(weight=weight)
     # loss_fn = nn.BCELoss()
     optimizer = Adam(model.parameters(), lr=learning_rate)
@@ -319,21 +352,21 @@ def main_loop(annot_dir, labels_type,weight_loss, learning_rate, epochs=20, batc
     df_train = pd.read_csv(annot_dir + 'train_set.csv')
     if not other_class :
         df_train = df_train.iloc[df_train['Face']!=2]
-    print(df_path_train.head())
+    print(df_train.head())
     train_set = CustomDataset(df_train, annot_dir, labels_type)
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
     df_valid = pd.read_csv(annot_dir + 'validation_set.csv')
     if not other_class :
         df_valid = df_valid.iloc[df_valid['Face']!=2]
-    print(df_path_valid.tail())
+    print(df_valid.tail())
     val_set = CustomDataset(df_valid, annot_dir, labels_type)
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
     df_test = pd.read_csv(annot_dir + 'test_set.csv')
     if not other_class :
         df_test = df_test.iloc[df_test['Face']!=2]
-    print(df_path_test.tail())
+    print(df_test.tail())
     test_set = CustomDataset(df_test, annot_dir, labels_type)
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, num_workers=0)
     pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -356,7 +389,11 @@ def main_loop(annot_dir, labels_type,weight_loss, learning_rate, epochs=20, batc
     print("\nSaving model at ", model_path)
     save_model(model, model_path)
     
-    fig_fn = "fig"
+    recap_path = os.path.join("models","model_" +model_name+"summary.txt")
+    with open(recap_path) as recap_file:
+        recap_file.write(summary_training(
+            model,annot_dir,labels_type,weights_loss,learning_rate,epochs,batch_size,other_class,bands))
+    fig_fn = "model"+model_name+"loss_curves"
     display_save_figure(model_dir,fig_fn, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid)
 
     print("\nTesting model")
