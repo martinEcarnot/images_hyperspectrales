@@ -66,13 +66,12 @@ def shuffle_leave_one_out(annot_dir, annot_fn='full_set', prop=[0.8, 0.2]):
     df = pd.read_csv(annot_dir + annot_fn + '.csv')
     species_test = rd.randint(1, 8)
     df_test = df.loc[df['Species'] == species_test]
-    df = df.loc[df['Species'] != species_test]
+    #df = df.loc[df['Species'] != species_test]
     N = len(df)
-    shuffled_indexes = [i for i in df.index]
+    shuffled_indexes = [i for i in df.loc[df['Species'] != species_test].index]
     shuffle(shuffled_indexes)
     train_idx = shuffled_indexes[:int(prop[0]*N)]
     val_idx = shuffled_indexes[int(prop[0]*N):]
-    
     df_train = df.iloc[train_idx]
     df_val = df.iloc[val_idx]
     
