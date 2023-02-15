@@ -132,7 +132,7 @@ def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, ver
         image, labels = image.to(device), labels.to(device)
 
         image = image.permute(0, 3, 1, 2).float()
-        image = image[:,:,bands]
+        image = image[:,bands]
         # Compute prediction error
         output = model(image)
         list_y_pred += output.argmax(1).tolist()
@@ -152,7 +152,7 @@ def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, ver
                 print(f"loss: {loss:>7f}  [{current:>5d}/{size_train:>5d}]")
 
     # Determination of other metrics (they are just print but can be retrieve as a dictionnary if necessary)
-    print(classification_report(list_y, list_y_pred, labels=np.unique(list_y_pred)))
+    print(classification_report(list_y, list_y_pred, labels=np.unique(list_y)))
 
     # Validation
     valid_loss, correct_valid = 0, 0
@@ -165,7 +165,7 @@ def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, ver
         image_val, label_val = image_val.to(device), label_val.to(device)
 
         image_val = image_val.permute(0, 3, 1, 2).float()
-
+        image_val = image_val[:,bands]
         # Forward pass validation
         target = model(image_val)
         # Classification report
@@ -176,7 +176,7 @@ def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, ver
         # Calculate Loss
         valid_loss += loss.item()
         correct_valid += (target.argmax(1) == label_val).type(torch.float).sum().item()
-    print(classification_report(list_y_val, list_y_pred_val, labels=np.unique(list_y_pred_val)))
+    print(classification_report(list_y_val, list_y_pred_val, labels=np.unique(list_y_val)))
 
     train_loss /= num_batches_train
     valid_loss /= num_batches_valid
@@ -188,7 +188,7 @@ def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, ver
     return model, correct, correct_valid, train_loss, valid_loss
 
 
-def test_model(test_loader, device, model, loss_fn, test_dir = 'img/cropped/', test_name = 'test_set', bands = [i for i in range(216)]):
+def test_model(test_loader, device, model, loss_fn, test_dir = 'img/cropped/', test_name = 'test_set', bands = [i for i in range(216)], other_class = False):
     """
     Apply the trained model to test dataset
 
@@ -209,7 +209,7 @@ def test_model(test_loader, device, model, loss_fn, test_dir = 'img/cropped/', t
         for images, labels in test_loader:
             images, labels = images.to(device), labels.to(device)
             images = images.permute(0, 3, 1, 2).float()
-            images = images[:,:,bands]
+            images = images[:,bands]
             output = model(images)
             tmp = output.tolist()
             list_y_probas += [tmp[i] for i in range(images.size(dim=0))]
@@ -220,12 +220,14 @@ def test_model(test_loader, device, model, loss_fn, test_dir = 'img/cropped/', t
     test_loss /= num_batches
     correct /= size
     df_test = pd.read_csv(test_dir + test_name + '.csv')
+    if not other_class :
+        df_test = df_test.loc[df_test['Face']!=2]
     df_test['Probas'] = list_y_probas
     df_test['Face_pred'] = list_y_pred
     df_test.to_csv(test_dir + test_name + '.csv')
     print(f"Test : \n Accuracy: {(100 * correct):>0.1f}% \t Avg loss: {test_loss:>8f} \n")
     # Determination of other metrics
-    print(classification_report(list_y, list_y_pred, labels=np.unique(list_y_pred)))
+    print(classification_report(list_y, list_y_pred, labels=np.unique(list_y)))
     return 100*correct, test_loss
 
 
@@ -318,22 +320,25 @@ def main_loop(annot_dir, labels_type,weight_loss, learning_rate, epochs=20, batc
 
     df_train = pd.read_csv(annot_dir + 'train_set.csv')
     if not other_class :
-        df_train = df_train.iloc[df_train['Face']!=2]
-    print(df_path_train.head())
+        df_train = df_train.loc[df_train['Face']!=2]
+        df_train.index = [i for i in range(len(df_train))]
+    print(df_train.head(10))
     train_set = CustomDataset(df_train, annot_dir, labels_type)
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
     df_valid = pd.read_csv(annot_dir + 'validation_set.csv')
     if not other_class :
-        df_valid = df_valid.iloc[df_valid['Face']!=2]
-    print(df_path_valid.tail())
+        df_valid = df_valid.loc[df_valid['Face']!=2]
+        df_valid.index = [i for i in range(len(df_valid))]
+    print(df_valid.tail())
     val_set = CustomDataset(df_valid, annot_dir, labels_type)
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
     df_test = pd.read_csv(annot_dir + 'test_set.csv')
     if not other_class :
-        df_test = df_test.iloc[df_test['Face']!=2]
-    print(df_path_test.tail())
+        df_test = df_test.loc[df_test['Face']!=2]
+        df_test.index = [i for i in range(len(df_test))]
+    print(df_test.tail())
     test_set = CustomDataset(df_test, annot_dir, labels_type)
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, num_workers=0)
     pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -360,7 +365,7 @@ def main_loop(annot_dir, labels_type,weight_loss, learning_rate, epochs=20, batc
     display_save_figure(model_dir,fig_fn, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid)
 
     print("\nTesting model")
-    test_accu, test_loss = test_model(test_loader, device, model=model, loss_fn=loss_fn)
+    test_accu, test_loss = test_model(test_loader, device, model=model, loss_fn=loss_fn, bands = bands)
 
     # Saving values
     print("\nSaving values of train, validation and test loops")

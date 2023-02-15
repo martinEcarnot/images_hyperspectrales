@@ -4,6 +4,7 @@ import cv2
 from os.path import join
 from os import walk,listdir
 from random import shuffle
+import random as rd
 import spectral as sp
 from display_image import band_brightness
 import matplotlib.pyplot as plt
@@ -43,12 +44,6 @@ def read_all_annot_csv(annot_dir, out_fn='full_set',clean=True):
 
 
 def shuffle_train_val_test(annot_dir, annot_fn='full_set', prop=[0.7, 0.15, 0.15]):  #prop = [0.7, 0.15, 0.15]
-    """
-    Concatenates the annotations files of all images and write them in a global annotations csv file.
-    :param annot_dir: path to the annotations directory
-    :param out_fn: name of the global annotations file (output)
-    :param clean: if True, cleans each image's annotations file with clean_annot_csv()
-    """
     df = pd.read_csv(annot_dir + annot_fn + '.csv')
     N = len(df)
     shuffled_indexes = [i for i in range(N)]
@@ -67,6 +62,26 @@ def shuffle_train_val_test(annot_dir, annot_fn='full_set', prop=[0.7, 0.15, 0.15
     
     
     
+def shuffle_leave_one_out(annot_dir, annot_fn='full_set', prop=[0.8, 0.2]): 
+    df = pd.read_csv(annot_dir + annot_fn + '.csv')
+    species_test = rd.randint(1, 8)
+    df_test = df.loc[df['Species'] == species_test]
+    df = df.loc[df['Species'] != species_test]
+    N = len(df)
+    shuffled_indexes = [i for i in df.index]
+    shuffle(shuffled_indexes)
+    train_idx = shuffled_indexes[:int(prop[0]*N)]
+    val_idx = shuffled_indexes[int(prop[0]*N):]
+    
+    df_train = df.iloc[train_idx]
+    df_val = df.iloc[val_idx]
+    
+    df_train.to_csv(annot_dir + 'train_set.csv',index=False)
+    df_val.to_csv(annot_dir + 'validation_set.csv',index=False)
+    df_test.to_csv(annot_dir + 'test_set.csv',index=False)
+    
+
+    
 def list_csv_to_pd(liste, delimiter):
     new_list = []
     for j in liste :
@@ -79,7 +94,8 @@ def list_csv_to_pd(liste, delimiter):
 
 def reconstitute_img(annot_dir_test_preds, annot_path_test_preds, img_folder):
     df = pd.read_csv(annot_dir_test_preds + annot_path_test_preds + '.csv')
-    img_name = df['Name_hdr'][0].split("_grain")[0]
+    idx = rd.randint(0, len(df['Name_hdr']))
+    img_name = df['Name_hdr'][idx].split("_grain")[0]
     df['Og_img'] = [df['Name_hdr'][i].split("_grain")[0] for i in range(len(df['Name_hdr']))]
     df = df.loc[df['Og_img'] == img_name]
     img = sp.open_image(img_folder + img_name + '.hdr')
