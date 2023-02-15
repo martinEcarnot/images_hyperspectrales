@@ -88,13 +88,6 @@ class CNN(nn.Module):
         x = self.softmax(x)
         return x
 
-c = CNN(dim_in=3)
-from torchinfo import summary
-
-
-x=summary(c, input_size=(8, 3, 200, 200))
-print(x)
-#summary(c,(3,200,200))
 def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, verbose=False, bands = [i for i in range(216)]):
     """
     Loop to train the deep learning model.
