@@ -1,4 +1,4 @@
-# images_hyperspectrales
+<<<<<<< HEAD# images_hyperspectrales
 
 The file main.py regroups every core functions developed to automatically detect and 
 extract grains, display figures, store data into a csv folder and use deep learning.
@@ -16,3 +16,4 @@ images are stored. The address "D:\\Etude technique" is an example.
 
 The csv folder regroups every intermediate result done in order to accelerate 
 computing time by loading values already calculated.
+
