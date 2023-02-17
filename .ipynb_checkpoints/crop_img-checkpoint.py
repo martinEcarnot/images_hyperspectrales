@@ -13,7 +13,7 @@ import csv
 from utils import *
 
 def crop_image(img_dir, img_fn, out_dir, crop_idx_dim1=1300,
-               band_step=20, apply_mask=False, force_creation=False, verbose=True, sillon = True, defauts = [], autre_cat = []):
+               bands = [i for i in range(216)], apply_mask=False, force_creation=False, verbose=True, sillon = True, defauts = [], autre_cat = []):
     """
     Given an hyperspectral image, use the function preprocessing from preprocessing.py to retrieve 
     bbox coordinates,extract the hyperspectral image for each grain and save it in a particular folder.
@@ -52,7 +52,7 @@ def crop_image(img_dir, img_fn, out_dir, crop_idx_dim1=1300,
         img = sp.open_image(img_dir + img_fn + '.hdr')
 
         # The number of band is considered as a static number, 216
-        n_bands = 216 // band_step
+        n_bands = len(bands)
 
         # Retrieve values to convert grain image to reflectance
         array_ref = np.genfromtxt(os.path.join(img_dir, "csv", "lum_spectralon_" + img_fn + ".csv"), delimiter=',')
@@ -75,10 +75,10 @@ def crop_image(img_dir, img_fn, out_dir, crop_idx_dim1=1300,
             edge = box[0]  # Coordinate of the column in the original image
 
             for j in range(n_bands):
-                new_grain = grain_img[:, :, j * band_step]
+                new_grain = grain_img[:, :, bands[j]]
                 # Reflectance
                 for x in range(0, h):
-                    lum = array_ref[x+edge, j * band_step]
+                    lum = array_ref[x+edge, bands[j]]
                     new_grain[:, x] = new_grain[:, x] / lum if lum != 0 else [0] * w
                 if apply_mask:
                     dst = cv2.bitwise_and(new_grain, new_grain, mask=np.array(masks[k]).transpose())
@@ -90,7 +90,7 @@ def crop_image(img_dir, img_fn, out_dir, crop_idx_dim1=1300,
             envi.save_image(file_name, new_img, force=True)
 
 
-def crop_all_images(path_img, path_defauts, band_step=1, crop_idx_dim1=1300, apply_mask=True, force_creation=True, verbose=False):
+def crop_all_images(path_img, path_out, path_defauts, bands = [i for i in range(216)], crop_idx_dim1=1300, apply_mask=True, force_creation=True, verbose=False):
     """
     Use of the path_img function to extract all hyperspectral image at once into a train, valid and test sub-folders
     of a folder entitled with the number of bands
@@ -106,7 +106,7 @@ def crop_all_images(path_img, path_defauts, band_step=1, crop_idx_dim1=1300, app
 
     all_files = next(walk(path_img), (None, None, []))[2]  # Detect only the files, not the folders
     hdr_files = [x for x in all_files if "hdr" in x]  # Extract hdr files
-    path_out = os.path.join(path_img, 'cropped/')
+    
     if not os.path.exists(path_out):  # Creation folder entitled with the number of band
         os.makedirs(path_out)
     
@@ -125,7 +125,7 @@ def crop_all_images(path_img, path_defauts, band_step=1, crop_idx_dim1=1300, app
         defauts = [int(elem) for elem in defauts if elem!='']
         autre_cat = df_annotations.loc[filename,"Liste grains autre type"].split(',')
         autre_cat = [int(elem) for elem in autre_cat if elem!='']
-        crop_image(path_img, filename, path_out, crop_idx_dim1=crop_idx_dim1, band_step=band_step,
+        crop_image(path_img, filename, path_out, crop_idx_dim1=crop_idx_dim1, bands=bands,
                    apply_mask=apply_mask, force_creation=force_creation, verbose=verbose,sillon = sillon, defauts = defauts, autre_cat = autre_cat)
 
 

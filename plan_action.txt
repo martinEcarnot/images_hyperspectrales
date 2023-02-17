@@ -38,5 +38,6 @@ Dans tous les cas, il faut choisir si l'on prédit 2 ou 3 classes (càd si on ex
 - Nombre de couches / nombre de neurones par couche
 - L'architecture entière du réseau (potentiellment)
 
---CLASSIFCATION ESPECE--
+1. Comparaison avec/sans classe autre sur un entraînement
+
 

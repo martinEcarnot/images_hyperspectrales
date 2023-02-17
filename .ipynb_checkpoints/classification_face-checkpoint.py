@@ -10,6 +10,8 @@ from torch.optim import Adam
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import classification_report
 import csv
+from torchinfo import summary
+from cnns import *
 
 class CustomDataset(Dataset):
     """
@@ -46,49 +48,7 @@ class CustomDataset(Dataset):
         return img_tensor, torch.tensor(self.labels[idx])
 
 
-class CNN(nn.Module):
-    """
-    Creation of the neural network
-    """
-
-    def __init__(self, dim_in):
-        """
-        Initialisation of the layers
-        :param dim_in: dimension of the input image
-        """
-        super().__init__()
-        self.conv1 = nn.Conv2d(in_channels=dim_in, out_channels=10, kernel_size=(5, 5),stride=(3,3))
-        self.conv2 = nn.Conv2d(in_channels=10, out_channels=20, kernel_size=(3, 3),stride=(2,2),padding=(2,2))
-        self.conv3 = nn.Conv2d(in_channels=20, out_channels=50, kernel_size=(3, 3),stride=(2, 2),padding=(2,2))
-
-        self.pool = nn.MaxPool2d(kernel_size=2)
-        self.relu = nn.ReLU()
-        self.tanh = nn.Tanh()
-        self.flatten = nn.Flatten()
-        self.linear1 = nn.Linear(50*3*3, 30)
-        self.dropout = nn.Dropout(0.2)
-        self.linear2 = nn.Linear(30, 3)
-        self.softmax = nn.Softmax(dim=1)
-        
-    def forward(self, input_data):
-        """
-        Order of the layers
-        :param input_data: Input image
-        :return: a tensor of size (1, number of classes) (Softmax)
-        """
-        x = self.pool(self.relu(self.conv1(input_data)))
-        x = self.pool(self.relu(self.conv2(x)))
-        x = self.pool(self.relu(self.conv3(x)))
-
-        x = self.flatten(x)
-        x = self.linear1(x)
-        x = self.dropout(x)
-        x = self.relu(x)
-        x = self.linear2(x)
-        x = self.softmax(x)
-        return x
-
-def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, verbose=False, bands = [i for i in range(216)]):
+def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, verbose=False):
     """
     Loop to train the deep learning model.
 
@@ -101,11 +61,6 @@ def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, ver
     :param verbose: Set to True to display the model parameters and information during training
     :return: The trained model, accuracy training, accuracy validation, train_loss, valid_loss
     """
-    if verbose:
-        # from torchsummary import summary
-        print(model)
-        # summary(model, input_size=(21, 200, 200))  # 21 = nb_bands
-    dim_in = len(bands)
     
     train_loss, correct = 0, 0
     size_train = len(train_loader.dataset)
@@ -125,7 +80,6 @@ def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, ver
         image, labels = image.to(device), labels.to(device)
 
         image = image.permute(0, 3, 1, 2).float()
-        image = image[:,bands]
         # Compute prediction error
         output = model(image)
         list_y_pred += output.argmax(1).tolist()
@@ -158,7 +112,6 @@ def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, ver
         image_val, label_val = image_val.to(device), label_val.to(device)
 
         image_val = image_val.permute(0, 3, 1, 2).float()
-        image_val = image_val[:,bands]
         # Forward pass validation
         target = model(image_val)
         # Classification report
@@ -181,7 +134,7 @@ def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, ver
     return model, correct, correct_valid, train_loss, valid_loss
 
 
-def test_model(test_loader, device, model, loss_fn, test_dir = 'img/cropped/', test_name = 'test_set', bands = [i for i in range(216)], other_class = False):
+def test_model(test_loader, device, model, loss_fn, test_dir = 'img/cropped/', test_name = 'test_set', other_class = False):
     """
     Apply the trained model to test dataset
 
@@ -202,7 +155,6 @@ def test_model(test_loader, device, model, loss_fn, test_dir = 'img/cropped/', t
         for images, labels in test_loader:
             images, labels = images.to(device), labels.to(device)
             images = images.permute(0, 3, 1, 2).float()
-            images = images[:,bands]
             output = model(images)
             tmp = output.tolist()
             list_y_probas += [tmp[i] for i in range(images.size(dim=0))]
@@ -213,8 +165,12 @@ def test_model(test_loader, device, model, loss_fn, test_dir = 'img/cropped/', t
     test_loss /= num_batches
     correct /= size
     df_test = pd.read_csv(test_dir + test_name + '.csv')
+    print(df_test.loc[df_test['Face']==2])
+    print(len(df_test['Face']))
     if not other_class :
         df_test = df_test.loc[df_test['Face']!=2]
+    print(len(list_y_probas))
+    print(len(df_test['Face']))
     df_test['Probas'] = list_y_probas
     df_test['Face_pred'] = list_y_pred
     df_test.to_csv(test_dir + test_name + '.csv')
@@ -222,6 +178,7 @@ def test_model(test_loader, device, model, loss_fn, test_dir = 'img/cropped/', t
     # Determination of other metrics
     print(classification_report(list_y, list_y_pred, labels=np.unique(list_y)))
     return 100*correct, test_loss
+
 
 def summary_training(model,annot_dir,labels_type,weights_loss, learning_rate, epochs, batch_size, other_class, bands):
     n_classes=0
@@ -234,35 +191,33 @@ def summary_training(model,annot_dir,labels_type,weights_loss, learning_rate, ep
         n_classes=8
     struct = summary(model,(batch_size,len(bands),200,200))
 
-    summary ="""
-    TASK
-    Directory used for annotations : {annot_dir}
-    Classification type : {labels_type}
-    Number of classes : {n_classes}
-    Bands used : {bands}
-    Number of bands : {n_bands}
+    res ='''TASK
+Directory used for annotations : {}
+Classification type : {}
+Number of classes : {}
+Bands used : {}
+Number of bands : {}
 
 
-    MODEL'S HYPERPARAMETERS
-    Structure : 
-    {struct}
-
-
-    Number of epochs : {epochs}
-    Learning rate : {lr}
-    Batch size : {batch_size}
-    Classes' weights in the loss : {weights_loss}
-    """.format(
-        labels_type=labels_type,
-        n_classes=n_classes,
-        bands=bands,
-        n_bands=len(bands),
-        struct=struct,
-        epochs=epochs,
-        batch_size=batch_size, 
-        weights_loss=weights_loss
+MODEL'S HYPERPARAMETERS
+Structure : 
+{}
+Number of epochs : {}
+Learning rate : {}
+Batch size : {}
+Classes' weights in the loss : {}'''.format(
+        annot_dir,
+        labels_type,
+        n_classes,
+        bands,
+        len(bands),
+        struct,
+        epochs,
+        learning_rate,
+        batch_size, 
+        weights_loss
     )
-    return summary
+    return res
 
 def save_model(model_, save_path):
     """
@@ -327,10 +282,11 @@ def display_save_figure(fig_dir,fig_fn, list_accu_train, list_accu_valid, list_l
     fig.savefig(os.path.join(fig_dir, fig_fn+".png"), dpi=200, format='png')
 
 
-def main_loop(annot_dir, labels_type,weights_loss, learning_rate, epochs=20, batch_size=12, other_class = False, bands = [i for i in range(216)]):
+def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate, epochs=20, batch_size=12, other_class = False):
     """
     Main to train a model given a certain number of epoch, a loss and an optimizer
 
+    :param cnn: class of the CNN to be used.
     :param annot_dir: path to the directory of the annotations files
     :labels_type: name of the column containing the labels, here "Face" or "Species"
     :param weights_loss: the weights to consider for each class
@@ -338,18 +294,21 @@ def main_loop(annot_dir, labels_type,weights_loss, learning_rate, epochs=20, bat
     :param epochs: number of epochs used for training
     :param batch_size: number of image to process before updating parameters
     """
-    dim_in = len(bands)
-    
+    bands = []
+    with open(annot_dir + 'bands.txt', "r") as f:
+        dim_in = int(f.readline()[-2])
+        second_line = f.readline().split(': ')[1]
+        if second_line[:3] == 'RGB' :
+            bands = [22, 53, 89]
+        elif second_line[:3] == 'All':
+            bands = [i for i in range(216)]
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = CNN(dim_in).to(device)
+    model = cnn(dim_in).to(device)
 
     weight = torch.tensor(weights_loss).to(device)
     loss_fn = nn.CrossEntropyLoss(weight=weight)
     # loss_fn = nn.BCELoss()
     optimizer = Adam(model.parameters(), lr=learning_rate)
-
-    model_name = input("Enter the name of the model to be trained")
-    model_dir = input("Enter the directory of the model to be trained and its related figures")
 
     df_train = pd.read_csv(annot_dir + 'train_set.csv')
     if not other_class :
@@ -370,11 +329,11 @@ def main_loop(annot_dir, labels_type,weights_loss, learning_rate, epochs=20, bat
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
     df_test = pd.read_csv(annot_dir + 'test_set.csv')
+    
     if not other_class :
         df_test = df_test.loc[df_test['Face']!=2]
         df_test.index = [i for i in range(len(df_test))]
-
-    print(df_test.tail())
+    
     test_set = CustomDataset(df_test, annot_dir, labels_type)
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, num_workers=0)
     pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -387,32 +346,35 @@ def main_loop(annot_dir, labels_type,weights_loss, learning_rate, epochs=20, bat
     for t in range(epochs):
         print(f"\nEpoch {t + 1}\n-------------------------------")
         model, correct, correct_valid, train_loss, valid_loss = train_model(train_loader, val_loader, device,
-                                                                            model=model, loss_fn=loss_fn, optimizer=optimizer, bands = bands)
+                                                                            model=model, loss_fn=loss_fn, optimizer=optimizer)
         list_accu_train.append(correct*100)
         list_accu_valid.append(correct_valid*100)
         list_loss_train.append(train_loss.item())  # Apparently tensor
         list_loss_valid.append(valid_loss)
-
-    model_path = os.path.join("models", "model_" + model_name + ".pth")
+        
+    model_dir = os.path.join("models", model_fn)
+    if not(os.path.exists(model_dir)):
+        os.mkdir(model_dir)
+    model_path = os.path.join("models",model_fn,model_fn + ".pth")
     print("\nSaving model at ", model_path)
     save_model(model, model_path)
     
-    recap_path = os.path.join("models","model_" +model_name+"summary.txt")
-    with open(recap_path) as recap_file:
+    recap_path = os.path.join("models",model_fn,model_fn+"_summary.txt")
+    with open(recap_path,'w') as recap_file:
         recap_file.write(summary_training(
-            model,annot_dir,labels_type,weights_loss,learning_rate,epochs,batch_size,other_class,bands))
-    fig_fn = "model"+model_name+"loss_curves"
-    display_save_figure(model_dir,fig_fn, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid)
+            model, annot_dir, labels_type, weights_loss, learning_rate, epochs, batch_size, other_class, bands = bands))
+    fig_fn = model_fn+"training_evolution"
+    display_save_figure(model_dir, fig_fn, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid)
 
     print("\nTesting model")
-    test_accu, test_loss = test_model(test_loader, device, model=model, loss_fn=loss_fn, bands = bands)
+    test_accu, test_loss = test_model(test_loader, device, model=model, loss_fn=loss_fn, test_dir = annot_dir)
 
     # Saving values
     print("\nSaving values of train, validation and test loops")
     save_array = np.asarray([list_accu_train, list_accu_valid, list_loss_train, list_loss_valid])
-    np.savetxt(os.path.join(model_dir, model_name +"_values_train_valid.csv"), save_array,
+    np.savetxt(os.path.join(model_dir, model_fn +"_values_train_valid.csv"), save_array,
                delimiter=",", fmt='%.5e')  # Train
-    np.savetxt(os.path.join(model_dir, model_name +"_values_test.csv"), np.asarray([[test_accu], [test_loss]]),
+    np.savetxt(os.path.join(model_dir, model_fn +"_values_test.csv"), np.asarray([[test_accu], [test_loss]]),
                delimiter=",", fmt='%.5e')  # Test
 
     print("\nDone!")
