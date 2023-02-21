@@ -66,7 +66,6 @@ def shuffle_leave_one_out(annot_dir, annot_fn='full_set', prop=[0.8, 0.2]):
     df = pd.read_csv(annot_dir + annot_fn + '.csv')
     species_test = rd.randint(1, 8)
     df_test = df.loc[df['Species'] == species_test]
-    #df = df.loc[df['Species'] != species_test]
     N = len(df)
     shuffled_indexes = [i for i in df.loc[df['Species'] != species_test].index]
     shuffle(shuffled_indexes)
@@ -78,8 +77,21 @@ def shuffle_leave_one_out(annot_dir, annot_fn='full_set', prop=[0.8, 0.2]):
     df_train.to_csv(annot_dir + 'train_set.csv',index=False)
     df_val.to_csv(annot_dir + 'validation_set.csv',index=False)
     df_test.to_csv(annot_dir + 'test_set.csv',index=False)
-    
 
+#A changer 
+def shuffle_test_on_ext_img(annot_dir, annot_fn='full_set', prop=[0.8, 0.2]): 
+    df = pd.read_csv(annot_dir + annot_fn + '.csv')  
+    N = len(df)
+    shuffled_indexes = [i for i in df.loc[df['Species'] != species_test].index]
+    shuffle(shuffled_indexes)
+    train_idx = shuffled_indexes[:int(prop[0]*N)]
+    val_idx = shuffled_indexes[int(prop[0]*N):]
+    df_train = df.iloc[train_idx]
+    df_val = df.iloc[val_idx]
+    
+    df_train.to_csv(annot_dir + 'train_set.csv',index=False)
+    df_val.to_csv(annot_dir + 'validation_set.csv',index=False)
+    #df_test.to_csv(annot_dir + 'test_set.csv',index=False)
     
 def list_csv_to_pd(liste, delimiter):
     new_list = []
@@ -122,3 +134,45 @@ def reconstitute_img(annot_dir_test_preds, annot_path_test_preds, img_folder):
     plt.imshow(img_fin)
     plt.show()
 
+
+def see_all_img(annot_dir, annot_path = 'full_set', img_folder = 'img/', preds = False, show_ind = False):
+    df = pd.read_csv(annot_dir + annot_path + '.csv')
+    df['Og_img'] = [df['Name_hdr'][i].split("_grain")[0] for i in range(len(df['Name_hdr']))]
+    images_names = np.unique(np.array(df['Og_img']))
+    for img_name in images_names :
+        df_copy = df.loc[df['Og_img'] == img_name]
+        img = sp.open_image(img_folder + img_name + '.hdr')
+        img_r = img[:, :, 22] / band_brightness(img, 22)
+        img_g = img[:, :, 53] / band_brightness(img, 53)
+        img_b = img[:, :, 89] / band_brightness(img, 89)
+        img_fin = np.fliplr(cv2.rotate(np.dstack((img_b, img_g, img_r)), cv2.ROTATE_90_CLOCKWISE))
+        print('Image : ' + img_name)
+        fig, ax = plt.subplots()
+        fig.set_figheight(50)
+        fig.set_figwidth(50)
+        ax.xaxis.tick_top()
+        for i in df_copy.index:
+            bbox_list = ast.literal_eval(df['Bbox'][i])
+            x1, y1, x2, y2 = bbox_list
+            if preds :
+                column = df['Face_pred']
+            else :
+                column = df['Face']
+            if column[i] == 0 :
+                color = 'blue'
+            elif column[i] == 1 :
+                color = 'red'
+            else :
+                color = 'green'
+            ax.add_patch(patches.Rectangle((y1, x1), y2 - y1, x2 - x1, fill=False, edgecolor=color, lw=2))
+            if preds :
+                plt.text(y2, x1, "{}".format(np.floor(max(ast.literal_eval(df['Probas'][i]))*100)/100), 
+                 bbox={'facecolor' : color}, ha="left", va="bottom", fontsize = 16, color = 'w')
+            elif show_ind :
+                plt.text(y2, x1, "{}".format(df.index[i]), 
+                     bbox={'facecolor' : color}, ha="left", va="bottom", fontsize = 16, color = 'w')
+        plt.imshow(img_fin)
+        plt.show()
+
+
+        

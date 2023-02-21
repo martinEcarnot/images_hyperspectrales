@@ -134,7 +134,7 @@ def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, ver
     return model, correct, correct_valid, train_loss, valid_loss
 
 
-def test_model(test_loader, device, model, loss_fn, test_dir = 'img/cropped/', test_name = 'test_set', other_class = False):
+def test_model(test_loader, device, model, loss_fn, test_dir, model_fn, test_name = 'test_set', other_class = False):
     """
     Apply the trained model to test dataset
 
@@ -165,15 +165,11 @@ def test_model(test_loader, device, model, loss_fn, test_dir = 'img/cropped/', t
     test_loss /= num_batches
     correct /= size
     df_test = pd.read_csv(test_dir + test_name + '.csv')
-    print(df_test.loc[df_test['Face']==2])
-    print(len(df_test['Face']))
     if not other_class :
         df_test = df_test.loc[df_test['Face']!=2]
-    print(len(list_y_probas))
-    print(len(df_test['Face']))
     df_test['Probas'] = list_y_probas
     df_test['Face_pred'] = list_y_pred
-    df_test.to_csv(test_dir + test_name + '.csv')
+    df_test.to_csv('models/' + model_fn + '/test_preds.csv', index = False)
     print(f"Test : \n Accuracy: {(100 * correct):>0.1f}% \t Avg loss: {test_loss:>8f} \n")
     # Determination of other metrics
     print(classification_report(list_y, list_y_pred, labels=np.unique(list_y)))
@@ -227,7 +223,7 @@ def save_model(model_, save_path):
     """
     torch.save(model_, save_path)
 
-
+    
 def load_model(load_path):
     """
     Load a saved model
@@ -281,7 +277,22 @@ def display_save_figure(fig_dir,fig_fn, list_accu_train, list_accu_valid, list_l
     plt.show()
     fig.savefig(os.path.join(fig_dir, fig_fn+".png"), dpi=200, format='png')
 
-
+def model_testing(model_fn, annot_dir, annot_path = 'test_set', other_face = False):
+    df_test = pd.read_csv(annot_dir + annot_path + '.csv')
+    if not other_face :
+        df_test = df_test.loc[df_test['Face']!=2]
+        df_test.index = [i for i in range(len(df_test))] 
+    test_set = CustomDataset(df_test, annot_dir, labels_type = 'Face')
+    test_loader = DataLoader(test_set, batch_size=12, shuffle=False, num_workers=0)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = torch.load(os.path.join('models', model_fn, model_fn + '.pth'))
+    weight_loss = [2., 2.]
+    weight = torch.tensor(weight_loss).to(device)
+    loss_fn = nn.CrossEntropyLoss(weight=weight)
+    test_model(test_loader, device, model=model, loss_fn=loss_fn, test_dir = annot_dir, model_fn = model_fn)
+    
+    
+    
 def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate, epochs=20, batch_size=12, other_class = False):
     """
     Main to train a model given a certain number of epoch, a loss and an optimizer
@@ -296,18 +307,18 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
     """
     bands = []
     with open(annot_dir + 'bands.txt', "r") as f:
-        dim_in = int(f.readline()[-2])
+        first_line = f.readline()
         second_line = f.readline().split(': ')[1]
         if second_line[:3] == 'RGB' :
             bands = [22, 53, 89]
         elif second_line[:3] == 'All':
             bands = [i for i in range(216)]
+    dim_in=len(bands)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = cnn(dim_in).to(device)
 
     weight = torch.tensor(weights_loss).to(device)
     loss_fn = nn.CrossEntropyLoss(weight=weight)
-    # loss_fn = nn.BCELoss()
     optimizer = Adam(model.parameters(), lr=learning_rate)
 
     df_train = pd.read_csv(annot_dir + 'train_set.csv')
@@ -363,11 +374,11 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
     with open(recap_path,'w') as recap_file:
         recap_file.write(summary_training(
             model, annot_dir, labels_type, weights_loss, learning_rate, epochs, batch_size, other_class, bands = bands))
-    fig_fn = model_fn+"training_evolution"
+    fig_fn = model_fn+"_training_evolution"
     display_save_figure(model_dir, fig_fn, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid)
 
     print("\nTesting model")
-    test_accu, test_loss = test_model(test_loader, device, model=model, loss_fn=loss_fn, test_dir = annot_dir)
+    test_accu, test_loss = test_model(test_loader, device, model=model, loss_fn=loss_fn, test_dir = annot_dir, model_fn = model_fn)
 
     # Saving values
     print("\nSaving values of train, validation and test loops")

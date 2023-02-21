@@ -38,5 +38,18 @@ Dans tous les cas, il faut choisir si l'on prédit 2 ou 3 classes (càd si on ex
 - Nombre de couches / nombre de neurones par couche
 - L'architecture entière du réseau (potentiellment)
 
---CLASSIFCATION ESPECE--
+
+
+
+UPDATE 20/02
+cross_validation
+essayer encore 2 ou 3 modeles pour ne garder que le meilleur
+tester un leave one out sur le meilleur modele
+
+entrainer des modeles sur les variétés en prenant en compte les faces
+question du finetuning?
+sélectionner le meilleur modèle
+commenter le code
+changer les paths rgb et hyperspectral
+
 
