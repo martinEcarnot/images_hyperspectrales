@@ -325,7 +325,6 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
     if not other_class :
         df_train = df_train.loc[df_train['Face']!=2]
         df_train.index = [i for i in range(len(df_train))]
-    print(df_train.head(10))
 
     train_set = CustomDataset(df_train, annot_dir, labels_type)
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
@@ -335,7 +334,6 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
         df_valid = df_valid.loc[df_valid['Face']!=2]
         df_valid.index = [i for i in range(len(df_valid))]
 
-    print(df_valid.tail())
     val_set = CustomDataset(df_valid, annot_dir, labels_type)
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
