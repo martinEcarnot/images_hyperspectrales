@@ -1,3 +1,14 @@
+from utils import *
+from classification_face import *
+annot_dir = "img/cropped/RGB/"
+learning_rate = 1e-4
+epochs = 80
+weights_loss = [2., 2.]
+main_loop(annot_dir = annot_dir, cnn = CNN_2, model_fn = 'CNN_2_2_loo8', labels_type = 'Face', 
+              weights_loss = weights_loss, learning_rate = learning_rate, epochs=epochs, 
+              batch_size=32, other_class = False
+          )
+"""
 from classification_face import *
 from cnns import *
 
@@ -32,6 +43,7 @@ for lr in learning_rates:
         batch_size=32,
         other_class = False)
     j+=1
+"""
 """
 i=10
 j=0

@@ -67,7 +67,8 @@ def shuffle_leave_one_out(annot_dir, annot_fn='full_set', prop=[0.8, 0.2]):
     species_test = rd.randint(1, 8)
     df_test = df.loc[df['Species'] == species_test]
     #df = df.loc[df['Species'] != species_test]
-   
+    
+    print("Variété exclue de l'entraïnement : Variété " + str(species_test))
     shuffled_indexes = [i for i in df.loc[df['Species'] != species_test].index]
     N = len(shuffled_indexes)
     shuffle(shuffled_indexes)
@@ -176,6 +177,3 @@ def see_all_img(annot_dir, annot_path = 'full_set', img_folder = 'img/', preds =
                      bbox={'facecolor' : color}, ha="left", va="bottom", fontsize = 16, color = 'w')
         plt.imshow(img_fin)
         plt.show()
-
-
-        
