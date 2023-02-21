@@ -17,10 +17,12 @@ class CNN_1(nn.Module):
 
         self.pool = nn.MaxPool2d(kernel_size=2)
         self.relu = nn.ReLU()
+
         self.flatten = nn.Flatten()
         self.linear1 = nn.Linear(25*25*25, 10)
         self.dropout = nn.Dropout(0.2)
         self.linear2 = nn.Linear(10, 2)
+
         self.softmax = nn.Softmax(dim=1)
         
     def forward(self, input_data):
@@ -53,6 +55,7 @@ class CNN_2(nn.Module):
         :param dim_in: dimension of the input image
         """
         super().__init__()
+
         self.conv1 = nn.Conv2d(in_channels=dim_in, out_channels=8, kernel_size=(7, 7),padding=(2, 2),stride=(1, 1))
         self.conv2 = nn.Conv2d(in_channels=8, out_channels=16, kernel_size=(5, 5),stride=(1, 1),padding=(1, 1))
         self.conv3 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(3, 3),stride=(1, 1),padding=(1, 1))
@@ -68,6 +71,7 @@ class CNN_2(nn.Module):
         self.dropout = nn.Dropout(0.2)
         self.linear2 = nn.Linear(100, 20)
         self.linear3 = nn.Linear(20, 2)
+
         self.softmax = nn.Softmax(dim=1)
         
     def forward(self, input_data):
@@ -83,11 +87,15 @@ class CNN_2(nn.Module):
         x = self.pool2(self.relu(self.conv5(x)))
         x = self.flatten(x)
         
+
         x = self.linear1(x)
         x = self.dropout(x)
         x = self.relu(x)
         x = self.linear2(x)
+
         x = self.relu(x)
         x = self.linear3(x)
+
+
         x = self.softmax(x)
         return x

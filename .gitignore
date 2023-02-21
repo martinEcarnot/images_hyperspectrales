@@ -1,5 +1,5 @@
 img/*
 models/*
 __pycache__*
-.ipynb_checkpoints*
+.ipynb_checkpoints/*
 main_2.ipynb

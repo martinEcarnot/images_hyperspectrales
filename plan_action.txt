@@ -52,5 +52,7 @@ question du finetuning?
 sélectionner le meilleur modèle
 commenter le code
 changer les paths rgb et hyperspectral
+=======
+1. Comparaison avec/sans classe autre sur un entraînement
 
 

@@ -66,8 +66,10 @@ def shuffle_leave_one_out(annot_dir, annot_fn='full_set', prop=[0.8, 0.2]):
     df = pd.read_csv(annot_dir + annot_fn + '.csv')
     species_test = rd.randint(1, 8)
     df_test = df.loc[df['Species'] == species_test]
-    N = len(df)
+    #df = df.loc[df['Species'] != species_test]
+   
     shuffled_indexes = [i for i in df.loc[df['Species'] != species_test].index]
+    N = len(shuffled_indexes)
     shuffle(shuffled_indexes)
     train_idx = shuffled_indexes[:int(prop[0]*N)]
     val_idx = shuffled_indexes[int(prop[0]*N):]
@@ -92,6 +94,7 @@ def shuffle_test_on_ext_img(annot_dir, annot_fn='full_set', prop=[0.8, 0.2]):
     df_train.to_csv(annot_dir + 'train_set.csv',index=False)
     df_val.to_csv(annot_dir + 'validation_set.csv',index=False)
     #df_test.to_csv(annot_dir + 'test_set.csv',index=False)
+
     
 def list_csv_to_pd(liste, delimiter):
     new_list = []

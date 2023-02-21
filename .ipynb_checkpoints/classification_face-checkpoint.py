@@ -135,6 +135,7 @@ def train_model(train_loader, val_loader, device, model, loss_fn, optimizer, ver
 
 
 def test_model(test_loader, device, model, loss_fn, test_dir, model_fn, test_name = 'test_set', other_class = False):
+
     """
     Apply the trained model to test dataset
 
@@ -293,6 +294,7 @@ def model_testing(model_fn, annot_dir, annot_path = 'test_set', other_face = Fal
     
     
     
+
 def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate, epochs=20, batch_size=12, other_class = False):
     """
     Main to train a model given a certain number of epoch, a loss and an optimizer
