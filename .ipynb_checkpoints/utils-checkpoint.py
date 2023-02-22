@@ -62,14 +62,15 @@ def shuffle_train_val_test(annot_dir, annot_fn='full_set', prop=[0.7, 0.15, 0.15
     
     
     
-def shuffle_leave_one_out(annot_dir, annot_fn='full_set', prop=[0.8, 0.2]): 
+def shuffle_leave_one_out(annot_dir, annot_fn='full_set', prop=[0.8, 0.2], var_test = None): 
     df = pd.read_csv(annot_dir + annot_fn + '.csv')
-    species_test = rd.randint(1, 8)
-    df_test = df.loc[df['Species'] == species_test]
-    #df = df.loc[df['Species'] != species_test]
+    if var_test == None or var_test not in [i for i in range(1, 9)]:
+        var_test = rd.randint(1, 8)
+    df_test = df.loc[df['Species'] == var_test]
+    #df = df.loc[df['Species'] != var_test]
     
-    print("Variété exclue de l'entraïnement : Variété " + str(species_test))
-    shuffled_indexes = [i for i in df.loc[df['Species'] != species_test].index]
+    print("Variété exclue de l'entraïnement : Variété " + str(var_test))
+    shuffled_indexes = [i for i in df.loc[df['Species'] != var_test].index]
     N = len(shuffled_indexes)
     shuffle(shuffled_indexes)
     train_idx = shuffled_indexes[:int(prop[0]*N)]

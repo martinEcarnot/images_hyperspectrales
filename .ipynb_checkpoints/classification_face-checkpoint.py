@@ -12,6 +12,8 @@ from sklearn.metrics import classification_report
 import csv
 from torchinfo import summary
 from cnns import *
+import random as rd
+from heapq import nsmallest
 
 class CustomDataset(Dataset):
     """
@@ -29,6 +31,12 @@ class CustomDataset(Dataset):
         self.names_hdr = df_annot["Name_hdr"]
         self.annot_dir = annot_dir
         self.labels = df_annot[labels_type]
+        if labels_type == 'Species' :
+            N = len(np.unique(self.labels))
+            ordered = nsmallest(N, np.unique(self.labels))
+            for i in range(N) :
+                self.labels = self.labels.replace(ordered[i], i)
+        
         
     def __len__(self):
         """
@@ -235,7 +243,7 @@ def load_model(load_path):
     return model_
 
 
-def display_save_figure(fig_dir,fig_fn, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid):
+def display_save_figure(fig_dir, fig_fn, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid):
     """
     After the training is done, the results are displayed and saved
 
@@ -295,7 +303,7 @@ def model_testing(model_fn, annot_dir, annot_path = 'test_set', other_face = Fal
     
     
 
-def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate, epochs=20, batch_size=12, other_class = False):
+def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate, epochs=20, batch_size=12, other_class = False, chosen_var = []):
     """
     Main to train a model given a certain number of epoch, a loss and an optimizer
 
@@ -327,7 +335,12 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
     if not other_class :
         df_train = df_train.loc[df_train['Face']!=2]
         df_train.index = [i for i in range(len(df_train))]
-
+    if labels_type == 'Species' :
+        if len(chosen_var)==0:
+            chosen_var = [i for i in range(8)]
+        print("Variétés que l'on va chercher à différencier : " + str(chosen_var)[1:-1])
+        df_train = df_train.loc[df_train['Species'].isin(chosen_var)]
+        df_train.index = [i for i in range(len(df_train))]
     train_set = CustomDataset(df_train, annot_dir, labels_type)
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
@@ -335,7 +348,9 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
     if not other_class :
         df_valid = df_valid.loc[df_valid['Face']!=2]
         df_valid.index = [i for i in range(len(df_valid))]
-
+    if labels_type == 'Species' :
+        df_valid = df_valid.loc[df_valid['Species'].isin(chosen_var)]
+        df_valid.index = [i for i in range(len(df_valid))]
     val_set = CustomDataset(df_valid, annot_dir, labels_type)
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
@@ -344,7 +359,10 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
     if not other_class :
         df_test = df_test.loc[df_test['Face']!=2]
         df_test.index = [i for i in range(len(df_test))]
-    
+    if labels_type == 'Species' :
+        df_test = df_test.loc[df_test['Species'].isin(chosen_var)]
+        df_test.index = [i for i in range(len(df_test))]
+        
     test_set = CustomDataset(df_test, annot_dir, labels_type)
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, num_workers=0)
     pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
