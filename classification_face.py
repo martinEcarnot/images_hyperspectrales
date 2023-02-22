@@ -11,6 +11,7 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import classification_report
 import csv
 from torchinfo import summary
+from utils import *
 from cnns import *
 
 class CustomDataset(Dataset):
@@ -419,27 +420,21 @@ def main_loop2(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rat
     loss_f = nn.CrossEntropyLoss(weight=weight)
     optimizer = Adam(model.parameters(), lr=learning_rate)
 
-    df_train = pd.read_csv(annot_dir + 'train_set.csv')
-    if not other_class :
-        df_train = df_train.loc[df_train['Face']!=2]
-        df_train.index = [i for i in range(len(df_train))]
+
+    
+
+
+    
 
     train_set = CustomDataset(df_train, annot_dir, labels_type)
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
-    df_valid = pd.read_csv(annot_dir + 'validation_set.csv')
-    if not other_class :
-        df_valid = df_valid.loc[df_valid['Face']!=2]
-        df_valid.index = [i for i in range(len(df_valid))]
+
 
     val_set = CustomDataset(df_valid, annot_dir, labels_type)
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
-    df_test = pd.read_csv(annot_dir + 'test_set.csv')
-    
-    if not other_class :
-        df_test = df_test.loc[df_test['Face']!=2]
-        df_test.index = [i for i in range(len(df_test))]
+
     
     test_set = CustomDataset(df_test, annot_dir, labels_type)
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, num_workers=0)
@@ -459,9 +454,7 @@ def main_loop2(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rat
         list_loss_train.append(train_loss.item())  # Apparently tensor
         list_loss_valid.append(valid_loss)
         
-    model_dir = os.path.join("models", model_fn)
-    if not(os.path.exists(model_dir)):
-        os.mkdir(model_dir)
+    
     model_path = os.path.join("models",model_fn,model_fn + ".pth")
     print("\nSaving model at ", model_path)
     save_model(model, model_path)
@@ -470,7 +463,6 @@ def main_loop2(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rat
     with open(recap_path,'w') as recap_file:
         recap_file.write(summary_training(
             model, annot_dir, labels_type, weights_loss, learning_rate, epochs, batch_size, other_class, bands = bands))
-    fig_fn = model_fn+"_training_evolution"
 
     print("\nTesting model")
     test_accu, test_loss = test_model(test_loader, device, model=model, loss_f=loss_f, test_dir = annot_dir, model_fn = model_fn)
@@ -485,6 +477,18 @@ def main_loop2(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rat
 
     print("\nDone!")
 
-def cross_validation(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate, epochs=20, batch_size=12, other_class = False):
+def cross_validation(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate, epochs=20, batch_size=12, other_class = False,n_folds):
+    
+    model_dir = os.path.join("models", model_fn)
+    if not(os.path.exists(model_dir)):
+        os.mkdir(model_dir)
+    shuffle_full(annot_dir,"full_set",model_dir)
+    df_full = pd.read_csv(os.path.join(model_dir,"full_set"+".csv"))
+
+    if not other_class :
+        df_full = df_full.loc[df_full['Face']!=2]
+        df_full.index = [i for i in range(len(df_full))]
+        df_full.to_csv(os.path.join(model_dir,"full_set.csv"),index=False)
+    
     for k in range(n_folds):
-        main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate, epochs=20, batch_size=12, other_class = False)
+        main_loop2(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate, epochs=20, batch_size=12, other_class = False)

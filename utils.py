@@ -43,6 +43,15 @@ def read_all_annot_csv(annot_dir, out_fn='full_set',clean=True):
     df_tot.to_csv(annot_dir+out_fn+'.csv',index=False)
 
 
+def shuffle_full(annot_dir, annot_fn,out_dir):
+    df_full = pd.read_csv(annot_dir + annot_fn + '.csv')
+    N = len(df_full)
+    shuffled_indexes = [i for i in range(N)]
+    shuffle(shuffled_indexes)
+    df_full = df_full.iloc[shuffled_indexes]
+    df_full.to_csv(os.path.join(out_dir,annot_fn + '.csv',index=False))
+
+
 def shuffle_train_val_test(annot_dir, annot_fn='full_set', prop=[0.7, 0.15, 0.15]):  #prop = [0.7, 0.15, 0.15]
     df = pd.read_csv(annot_dir + annot_fn + '.csv')
     N = len(df)
@@ -60,7 +69,8 @@ def shuffle_train_val_test(annot_dir, annot_fn='full_set', prop=[0.7, 0.15, 0.15
     df_val.to_csv(annot_dir + 'validation_set.csv',index=False)
     df_test.to_csv(annot_dir + 'test_set.csv',index=False)
     
-    
+
+
     
 def shuffle_leave_one_out(annot_dir, annot_fn='full_set', prop=[0.8, 0.2]): 
     df = pd.read_csv(annot_dir + annot_fn + '.csv')
