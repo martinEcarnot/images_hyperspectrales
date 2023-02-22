@@ -13,6 +13,8 @@ import csv
 from torchinfo import summary
 from utils import *
 from cnns import *
+import random as rd
+from heapq import nsmallest
 
 class CustomDataset(Dataset):
     """
@@ -30,6 +32,12 @@ class CustomDataset(Dataset):
         self.names_hdr = df_annot["Name_hdr"]
         self.annot_dir = annot_dir
         self.labels = df_annot[labels_type]
+        if labels_type == 'Species' :
+            N = len(np.unique(self.labels))
+            ordered = nsmallest(N, np.unique(self.labels))
+            for i in range(N) :
+                self.labels = self.labels.replace(ordered[i], i)
+        
         
     def __len__(self):
         """
@@ -236,7 +244,7 @@ def load_model(load_path):
     return model_
 
 
-def display_save_figure(fig_dir,fig_fn, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid):
+def display_save_figure(fig_dir, fig_fn, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid):
     """
     After the training is done, the results are displayed and saved
 
@@ -296,7 +304,7 @@ def model_testing(model_fn, annot_dir, annot_path = 'test_set', other_face = Fal
     
     
 
-def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate, epochs=20, batch_size=12, other_class = False):
+def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate, epochs=20, batch_size=12, other_class = False, chosen_var = []):
     """
     Main to train a model given a certain number of epoch, a loss and an optimizer
 
@@ -328,7 +336,12 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
     if not other_class :
         df_train = df_train.loc[df_train['Face']!=2]
         df_train.index = [i for i in range(len(df_train))]
-
+    if labels_type == 'Species' :
+        if len(chosen_var)==0:
+            chosen_var = [i for i in range(8)]
+        print("Variétés que l'on va chercher à différencier : " + str(chosen_var)[1:-1])
+        df_train = df_train.loc[df_train['Species'].isin(chosen_var)]
+        df_train.index = [i for i in range(len(df_train))]
     train_set = CustomDataset(df_train, annot_dir, labels_type)
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
@@ -336,7 +349,9 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
     if not other_class :
         df_valid = df_valid.loc[df_valid['Face']!=2]
         df_valid.index = [i for i in range(len(df_valid))]
-
+    if labels_type == 'Species' :
+        df_valid = df_valid.loc[df_valid['Species'].isin(chosen_var)]
+        df_valid.index = [i for i in range(len(df_valid))]
     val_set = CustomDataset(df_valid, annot_dir, labels_type)
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
@@ -345,7 +360,10 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
     if not other_class :
         df_test = df_test.loc[df_test['Face']!=2]
         df_test.index = [i for i in range(len(df_test))]
-    
+    if labels_type == 'Species' :
+        df_test = df_test.loc[df_test['Species'].isin(chosen_var)]
+        df_test.index = [i for i in range(len(df_test))]
+        
     test_set = CustomDataset(df_test, annot_dir, labels_type)
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, num_workers=0)
     pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -391,104 +409,3 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
 
     print("\nDone!")
     
-    
-def main_loop2(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate, epochs=20, batch_size=12, other_class = False):
-    """
-    Main to train a model given a certain number of epoch, a loss and an optimizer
-
-    :param cnn: class of the CNN to be used.
-    :param annot_dir: path to the directory of the annotations files
-    :labels_type: name of the column containing the labels, here "Face" or "Species"
-    :param weights_loss: the weights to consider for each class
-    :param learning_rate: Value for the exploration
-    :param epochs: number of epochs used for training
-    :param batch_size: number of image to process before updating parameters
-    """
-    bands = []
-    with open(annot_dir + 'bands.txt', "r") as f:
-        first_line = f.readline()
-        second_line = f.readline().split(': ')[1]
-        if second_line[:3] == 'RGB' :
-            bands = [22, 53, 89]
-        elif second_line[:3] == 'All':
-            bands = [i for i in range(216)]
-    dim_in=len(bands)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = cnn(dim_in).to(device)
-
-    weight = torch.tensor(weights_loss).to(device)
-    loss_f = nn.CrossEntropyLoss(weight=weight)
-    optimizer = Adam(model.parameters(), lr=learning_rate)
-
-
-    
-
-
-    
-
-    train_set = CustomDataset(df_train, annot_dir, labels_type)
-    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
-
-
-
-    val_set = CustomDataset(df_valid, annot_dir, labels_type)
-    val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True, num_workers=0)
-
-
-    
-    test_set = CustomDataset(df_test, annot_dir, labels_type)
-    test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, num_workers=0)
-    pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print("Nubmer of trainables parameters :" +str(pytorch_total_params))
-    print('\nTraining model')
-    list_accu_train = []
-    list_accu_valid = []
-    list_loss_train = []
-    list_loss_valid = []
-    for t in range(epochs):
-        print(f"\nEpoch {t + 1}\n-------------------------------")
-        model, correct, correct_valid, train_loss, valid_loss = train_model(train_loader, val_loader, device,
-                                                                            model=model, loss_f=loss_f, optimizer=optimizer)
-        list_accu_train.append(correct*100)
-        list_accu_valid.append(correct_valid*100)
-        list_loss_train.append(train_loss.item())  # Apparently tensor
-        list_loss_valid.append(valid_loss)
-        
-    
-    model_path = os.path.join("models",model_fn,model_fn + ".pth")
-    print("\nSaving model at ", model_path)
-    save_model(model, model_path)
-    
-    recap_path = os.path.join("models",model_fn,model_fn+"_summary.txt")
-    with open(recap_path,'w') as recap_file:
-        recap_file.write(summary_training(
-            model, annot_dir, labels_type, weights_loss, learning_rate, epochs, batch_size, other_class, bands = bands))
-
-    print("\nTesting model")
-    test_accu, test_loss = test_model(test_loader, device, model=model, loss_f=loss_f, test_dir = annot_dir, model_fn = model_fn)
-
-    # Saving values
-    print("\nSaving values of train, validation and test loops")
-    df_res_train_val = pd.DataFrame({"Train accuracy":list_accu_train,"Validation accuracy":list_accu_valid,"Train loss":list_loss_train,"Validation loss":list_loss_valid})
-    df_res_train_val.to_csv(os.path.join(model_dir, model_fn +"_values_train_valid.csv"),index=False)
-    df_res_test = pd.DataFrame({"Test accuracy":test_accu,"Test loss":test_loss},index=[0])
-    df_res_test.to_csv(os.path.join(model_dir, model_fn +"_values_test.csv"),index=False)
-
-
-    print("\nDone!")
-
-def cross_validation(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate, epochs=20, batch_size=12, other_class = False,n_folds):
-    
-    model_dir = os.path.join("models", model_fn)
-    if not(os.path.exists(model_dir)):
-        os.mkdir(model_dir)
-    shuffle_full(annot_dir,"full_set",model_dir)
-    df_full = pd.read_csv(os.path.join(model_dir,"full_set"+".csv"))
-
-    if not other_class :
-        df_full = df_full.loc[df_full['Face']!=2]
-        df_full.index = [i for i in range(len(df_full))]
-        df_full.to_csv(os.path.join(model_dir,"full_set.csv"),index=False)
-    
-    for k in range(n_folds):
-        main_loop2(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate, epochs=20, batch_size=12, other_class = False)

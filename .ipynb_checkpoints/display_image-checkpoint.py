@@ -38,9 +38,9 @@ def display_img(path_in, filename):
     #img = sp.open_image(path_in + '/' +  filename)
 
     # Normalizing each band regarding the mean brigthness of the spectralon
-    img_r = img[:, :, 22] / band_brigthness(img, 22)
-    img_g = img[:, :, 53] / band_brigthness(img, 53)
-    img_b = img[:, :, 89] / band_brigthness(img, 89)
+    img_r = img[:, :, 22] / band_brightness(img, 22)
+    img_g = img[:, :, 53] / band_brightness(img, 53)
+    img_b = img[:, :, 89] / band_brightness(img, 89)
 
     # Stack 3 channels
     img = np.dstack((img_b, img_g, img_r))
