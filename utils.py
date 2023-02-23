@@ -49,7 +49,7 @@ def shuffle_full(annot_dir, annot_fn,out_dir):
     shuffled_indexes = [i for i in range(N)]
     shuffle(shuffled_indexes)
     df_full = df_full.iloc[shuffled_indexes]
-    df_full.to_csv(os.path.join(out_dir,annot_fn + '.csv',index=False))
+    df_full.to_csv(join(out_dir,annot_fn + '.csv'),index=False)
 
 
 def shuffle_train_val_test(annot_dir, annot_fn='full_set', prop=[0.7, 0.15, 0.15]):  #prop = [0.7, 0.15, 0.15]

@@ -4,7 +4,7 @@ import torch
 from torchvision import transforms
 from torch.nn import functional as F
 import spectral as sp
-
+from display_image import band_brightness
 
 # define computation device
 device = ('cuda' if torch.cuda.is_available() else 'cpu')
@@ -40,11 +40,11 @@ def show_cam(CAMs, width, height, orig_image, class_idx, save_name):
         
 
 features_blobs = []
-def hook_feature(output):
+def hook_feature(module, input, output):
     features_blobs.append(output.data.cpu().numpy())
     
     
-model._modules.get('conv3').register_forward_hook(hook_feature)
+model._modules.get('conv1').register_forward_hook(hook_feature)
 # get the softmax weight
 params = list(model.parameters())
 weight_softmax = np.squeeze(params[-2].data.numpy())
@@ -60,21 +60,28 @@ transform = transforms.Compose(
     ])
 
 # run for all the images in the `input` folder
-image_path = 'img/cropped/RGB/var1_2020_x75y20_8000_us_2x_2022-04-26T122543_corr_grain0.hdr'
+image_path = 'img/cropped/RGB/var1_2020_x75y20_8000_us_2x_2022-04-26T122543_corr_grain20.hdr'
     # read the image
 image = sp.open_image(image_path)
-print(image[0])
-print(image.shape)
-image = np.array(image)
-print(image.shape)
+image = image[:,:,:]
+
+"""
+img_r = image[:, :, 22] / band_brightness(image, 22)
+img_g = image[:, :, 53] / band_brightness(image, 53)
+img_b = image[:, :, 89] / band_brightness(image, 89)
+"""
+
 orig_image = image.copy()
-image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-image = np.expand_dims(image, axis=2)
+#image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+#image = np.expand_dims(image, axis=2)
 height, width, _ = orig_image.shape
     # apply the image transforms
-image_tensor = transform(image)
+image_tensor = transform(torch.Tensor(image).permute(2, 0, 1)).unsqueeze(0)
+
     # add batch dimension
-image_tensor = image_tensor.unsqueeze(0)
+print(image_tensor.shape)
+
     # forward pass through model
 probs = model(image_tensor)
     # get the softmax probabilities

@@ -69,11 +69,8 @@ def train_model(train_loader, device, model, loss_f, optimizer, verbose=False):
     # List to stock y and y pred to print a classification report
     list_y_pred = []
     list_y = []
-    
-
     for batch_num, (image, labels) in enumerate(train_loader):
         model.train()
-
         # Transfer Data to GPU if available
         image, labels = image.to(device), labels.to(device)
 
@@ -85,7 +82,6 @@ def train_model(train_loader, device, model, loss_f, optimizer, verbose=False):
         loss = loss_f(output, labels)
         train_loss += loss
         correct += (output.argmax(1) == labels).type(torch.float).sum().item()
-
         # Backpropagation
         optimizer.zero_grad()
         loss.backward()
@@ -98,12 +94,10 @@ def train_model(train_loader, device, model, loss_f, optimizer, verbose=False):
 
     # Determination of other metrics (they are just print but can be retrieve as a dictionnary if necessary)
     print(classification_report(list_y, list_y_pred, labels=np.unique(list_y)))
+    return model,correct,train_loss
 
 
-    return model, correct
-
-
-def test_model(test_loader, device, model, loss_f, test_dir, model_fn, test_name = 'test_set', other_class = False):
+def test_model(test_loader, device, model, loss_f, model_fn, other_class = False):
 
     """
     Apply the trained model to test dataset
@@ -131,19 +125,13 @@ def test_model(test_loader, device, model, loss_f, test_dir, model_fn, test_name
             list_y_pred += output.argmax(1).tolist()
             list_y += labels.tolist()
             test_loss += loss_f(output, labels).item()
-            correct += (output.argmax(1) == labels).type(torch.float).sum().item()
+            correct += (output.argmax(1) == labels).type(torch.float).sum().item()/1000
     test_loss /= num_batches
     correct /= size
-    df_test = pd.read_csv(test_dir + test_name + '.csv')
-    if not other_class :
-        df_test = df_test.loc[df_test['Face']!=2]
-    df_test['Probas'] = list_y_probas
-    df_test['Face_pred'] = list_y_pred
-    df_test.to_csv('models/' + model_fn + '/test_preds.csv', index = False)
     print(f"Test : \n Accuracy: {(100 * correct):>0.1f}% \t Avg loss: {test_loss:>8f} \n")
     # Determination of other metrics
     print(classification_report(list_y, list_y_pred, labels=np.unique(list_y)))
-    return 100*correct, test_loss
+    return correct, test_loss
 
 
 def summary_training(model,annot_dir,labels_type,weights_loss, learning_rate, epochs, batch_size, other_class, bands):
@@ -247,11 +235,11 @@ def fold_loop(annot_dir, model, model_fn, weights_loss, train_loader, test_loade
     for t in range(epochs):
         print(f"\nEpoch {t + 1}\n-------------------------------")
         model, correct, train_loss = train_model(train_loader, device, model=model, loss_f=loss_f, optimizer=optimizer)
-        list_accu_train.append(correct*100)
+        list_accu_train.append(correct)
         list_loss_train.append(train_loss.item())
 
     print("\nTesting model")
-    test_accu, test_loss = test_model(test_loader, device, model=model, loss_f=loss_f, test_dir = annot_dir, model_fn = model_fn)
+    test_accu, test_loss = test_model(test_loader, device, model=model, loss_f=loss_f, model_fn = model_fn)
 
     df_res_train = pd.DataFrame({"Train accuracy":list_accu_train,"Train loss":list_loss_train})
     df_res_test = pd.DataFrame({"Test accuracy":test_accu,"Test loss":test_loss},index=[0])
@@ -264,7 +252,6 @@ def k_folds(df,K):
     K = 5
     q = N//K
     r = N%K
-
     ens = []
     deb = 0
     for j in range(K):
@@ -309,15 +296,16 @@ def cross_validation(annot_dir, cnn, model_fn, labels_type, weights_loss, learni
     df_res_trains = pd.DataFrame()
     df_res_tests = pd.DataFrame()
     for e in partition_df:
-        df_train = df_full[[i<e[0] or i>e[1] for i in df_full.index]]
-        df_test = df_full[e[0]:e[1]]
+        df_train = df_full.iloc[[i<e[0] or i>e[1] for i in df_full.index]]
+        df_train.index = [k for k in range(len(df_train))]
+        df_test = df_full.iloc[e[0]:e[1]]
+        df_test.index = [k for k in range(len(df_test))]
+
         
         train_set = CustomDataset(df_train, annot_dir, labels_type)
         test_set = CustomDataset(df_test, annot_dir, labels_type)
-        
         train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
         test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, num_workers=0)
-
         df_res_train,df_res_test = fold_loop(annot_dir, model, model_fn, weights_loss, train_loader, test_loader, learning_rate, epochs)
         print("\nSaving train and test performances for the {}-th fold".format(k))
         df_res_train.to_csv(os.path.join(model_dir, model_fn +"_values_train"+str(k)+".csv"),index=False)

@@ -143,7 +143,7 @@ def train_model(train_loader, val_loader, device, model, loss_f, optimizer, verb
     return model, correct, correct_valid, train_loss, valid_loss
 
 
-def test_model(test_loader, device, model, loss_f, test_dir, model_fn, test_name = 'test_set', other_class = False):
+def test_model(test_loader, device, model, loss_f, test_dir, model_fn, labels_type, test_name = 'test_set', other_class = False, chosen_var = [], chosen_face = None):
 
     """
     Apply the trained model to test dataset
@@ -177,8 +177,21 @@ def test_model(test_loader, device, model, loss_f, test_dir, model_fn, test_name
     df_test = pd.read_csv(test_dir + test_name + '.csv')
     if not other_class :
         df_test = df_test.loc[df_test['Face']!=2]
+    if labels_type == 'Species' :
+        if len(chosen_var)==0:
+            chosen_var = [i for i in range(8)]
+        df_test = df_test.loc[df_test['Species'].isin(chosen_var)]
+        df_test.index = [i for i in range(len(df_test))]
+        if chosen_face == 'Dos' :
+            df_test = df_test.loc[df_test['Face']==0]
+        elif chosen_face == 'Sillon' :
+            df_test = df_test.loc[df_test['Face']==1]
+    df_test.index = [i for i in range(len(df_test))]
     df_test['Probas'] = list_y_probas
-    df_test['Face_pred'] = list_y_pred
+    if labels_type == 'Face' :
+        df_test['Face_pred'] = list_y_pred
+    elif labels_type == 'Species':
+        df_test['Species_pred'] = [chosen_var[i] for i in list_y_pred]
     df_test.to_csv('models/' + model_fn + '/test_preds.csv', index = False)
     print(f"Test : \n Accuracy: {(100 * correct):>0.1f}% \t Avg loss: {test_loss:>8f} \n")
     # Determination of other metrics
@@ -186,7 +199,7 @@ def test_model(test_loader, device, model, loss_f, test_dir, model_fn, test_name
     return 100*correct, test_loss
 
 
-def summary_training(model,annot_dir,labels_type,weights_loss, learning_rate, epochs, batch_size, other_class, bands):
+def summary_training(model, annot_dir, labels_type, weights_loss, learning_rate, epochs, batch_size, other_class, bands):
     n_classes=0
     if labels_type=='Face':
         if other_class:
@@ -287,11 +300,20 @@ def display_save_figure(fig_dir, fig_fn, list_accu_train, list_accu_valid, list_
     plt.show()
     fig.savefig(os.path.join(fig_dir, fig_fn+".png"), dpi=200, format='png')
 
-def model_testing(model_fn, annot_dir, annot_path = 'test_set', other_face = False):
+def model_testing(model_fn, annot_dir, labels_type, annot_path = 'test_set', other_face = False, chosen_var = [], chosen_face = None):
     df_test = pd.read_csv(annot_dir + annot_path + '.csv')
     if not other_face :
         df_test = df_test.loc[df_test['Face']!=2]
-        df_test.index = [i for i in range(len(df_test))] 
+    if labels_type == 'Species' :
+        if len(chosen_var)==0:
+            chosen_var = [i for i in range(8)]
+        df_test = df_test.loc[df_test['Species'].isin(chosen_var)]
+        
+        if chosen_face == 'Dos' :
+            df_test = df_test.loc[df_test['Face']==0]
+        elif chosen_face == 'Sillon' :
+            df_test = df_test.loc[df_test['Face']==1]
+    df_test.index = [i for i in range(len(df_test))]
     test_set = CustomDataset(df_test, annot_dir, labels_type = 'Face')
     test_loader = DataLoader(test_set, batch_size=12, shuffle=False, num_workers=0)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -299,12 +321,12 @@ def model_testing(model_fn, annot_dir, annot_path = 'test_set', other_face = Fal
     weight_loss = [2., 2.]
     weight = torch.tensor(weight_loss).to(device)
     loss_f = nn.CrossEntropyLoss(weight=weight)
-    test_model(test_loader, device, model=model, loss_f=loss_f, test_dir = annot_dir, model_fn = model_fn)
+    test_model(test_loader, device, model=model, loss_f=loss_f, test_dir = annot_dir, model_fn = model_fn, labels_type = labels_type, other_face = other_face, chosen_var = chosen_var)
     
     
     
 
-def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate, epochs=20, batch_size=12, other_class = False, chosen_var = []):
+def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate, epochs=20, batch_size=12, other_class = False, chosen_var = [], chosen_face = None):
     """
     Main to train a model given a certain number of epoch, a loss and an optimizer
 
@@ -335,13 +357,16 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
     df_train = pd.read_csv(annot_dir + 'train_set.csv')
     if not other_class :
         df_train = df_train.loc[df_train['Face']!=2]
-        df_train.index = [i for i in range(len(df_train))]
     if labels_type == 'Species' :
         if len(chosen_var)==0:
             chosen_var = [i for i in range(8)]
         print("Variétés que l'on va chercher à différencier : " + str(chosen_var)[1:-1])
         df_train = df_train.loc[df_train['Species'].isin(chosen_var)]
-        df_train.index = [i for i in range(len(df_train))]
+        if chosen_face == 'Dos' :
+            df_train = df_train.loc[df_train['Face']==0]
+        elif chosen_face == 'Sillon' :
+            df_train = df_train.loc[df_train['Face']==1]
+    df_train.index = [i for i in range(len(df_train))]
     train_set = CustomDataset(df_train, annot_dir, labels_type)
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
@@ -397,7 +422,7 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
     display_save_figure(model_dir, fig_fn, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid)
 
     print("\nTesting model")
-    test_accu, test_loss = test_model(test_loader, device, model=model, loss_f=loss_f, test_dir = annot_dir, model_fn = model_fn)
+    test_accu, test_loss = test_model(test_loader, device, model=model, loss_f=loss_f, test_dir = annot_dir, model_fn = model_fn, labels_type = labels_type, chosen_var = chosen_var, chosen_face = chosen_face)
 
     # Saving values
     print("\nSaving values of train, validation and test loops")

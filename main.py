@@ -1,13 +1,31 @@
 from utils import *
-from classification_face import *
+from cross_validation import *
+from cnns import *
+
 annot_dir = "img/cropped/RGB/"
+cnn = CNN_1
+model_fn = "CNN_2_cross_validation_trial"
 learning_rate = 1e-4
-epochs = 80
+epochs = 1
+labels_type = "Face"
 weights_loss = [2., 2.]
-main_loop(annot_dir = annot_dir, cnn = CNN_2, model_fn = 'CNN_2_2_loo8', labels_type = 'Face', 
-              weights_loss = weights_loss, learning_rate = learning_rate, epochs=epochs, 
-              batch_size=32, other_class = False
-          )
+batch_size = 80
+other_class = False
+K=5
+
+
+cross_validation(
+    annot_dir=annot_dir,
+    cnn=cnn,
+    model_fn=model_fn,
+    labels_type=labels_type,
+    weights_loss=weights_loss,
+    learning_rate=learning_rate,
+    epochs=epochs,
+    batch_size=batch_size,
+    other_class = other_class,
+    K=K)
+
 """
 from classification_face import *
 from cnns import *
