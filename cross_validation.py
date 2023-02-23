@@ -95,12 +95,13 @@ def train_model(train_loader, device, model, loss_f, optimizer, verbose=False):
             if batch_num % 5 == 0:
                 loss, current = loss.item(), batch_num * len(image)
                 print(f"loss: {loss:>7f}  [{current:>5d}/{size_train:>5d}]")
-
+    correct/=size_train
+    train_loss/=num_batches_train
     # Determination of other metrics (they are just print but can be retrieve as a dictionnary if necessary)
     print(classification_report(list_y, list_y_pred, labels=np.unique(list_y)))
 
 
-    return model, correct
+    return model, correct, train_loss
 
 
 def test_model(test_loader, device, model, loss_f, test_dir, model_fn, test_name = 'test_set', other_class = False):
