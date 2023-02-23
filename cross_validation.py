@@ -135,12 +135,7 @@ def test_model(test_loader, device, model, loss_f, test_dir, model_fn, test_name
             correct += (output.argmax(1) == labels).type(torch.float).sum().item()
     test_loss /= num_batches
     correct /= size
-    df_test = pd.read_csv(test_dir + test_name + '.csv')
-    if not other_class :
-        df_test = df_test.loc[df_test['Face']!=2]
-    df_test['Probas'] = list_y_probas
-    df_test['Face_pred'] = list_y_pred
-    df_test.to_csv('models/' + model_fn + '/test_preds.csv', index = False)
+
     print(f"Test : \n Accuracy: {(100 * correct):>0.1f}% \t Avg loss: {test_loss:>8f} \n")
     # Determination of other metrics
     print(classification_report(list_y, list_y_pred, labels=np.unique(list_y)))
