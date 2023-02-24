@@ -13,40 +13,7 @@ import csv
 from torchinfo import summary
 from utils import *
 from cnns import *
-
-class CustomDataset(Dataset):
-    """
-    Create dataset for the network
-    """
-
-    def __init__(self, df_annot, annot_dir, labels_type):
-        """
-        Initialisation of the dataset
-        :param df_annot: dataframe containing at least the columns "Name_hdr" and "Face"/"Species"
-        :annot_dir: path of the directory containing the annotations
-        :labels_type: name of the column containing the labels, here "Face" or "Species"
-        """
-        super().__init__()
-        self.names_hdr = df_annot["Name_hdr"]
-        self.annot_dir = annot_dir
-        self.labels = df_annot[labels_type]
-        
-    def __len__(self):
-        """
-        Function used by the Dataset to retrieve the size
-        :return: len of the dataframe
-        """
-        return len(self.names_hdr)
-
-    def __getitem__(self, idx):
-        """
-        Creation of the tensor and the label
-        :param idx: indice to select the path in the list
-        :return: tensor, label
-        """
-        img = sp.open_image(self.annot_dir+self.names_hdr[idx])
-        img_tensor = torch.tensor(img[:, :, :])
-        return img_tensor, torch.tensor(self.labels[idx])
+from customdataset import CustomDataset
 
 
 def train_model(train_loader, device, model, loss_f, optimizer, verbose=False):
@@ -91,13 +58,15 @@ def train_model(train_loader, device, model, loss_f, optimizer, verbose=False):
             if batch_num % 5 == 0:
                 loss, current = loss.item(), batch_num * len(image)
                 print(f"loss: {loss:>7f}  [{current:>5d}/{size_train:>5d}]")
-
+    correct/=size_train
+    train_loss/=num_batches_train
     # Determination of other metrics (they are just print but can be retrieve as a dictionnary if necessary)
     print(classification_report(list_y, list_y_pred, labels=np.unique(list_y)))
     return model,correct,train_loss
 
 
-def test_model(test_loader, device, model, loss_f, model_fn, other_class = False):
+
+def test_model(test_loader, device, model, loss_f, model_dir,model_fn, test_name = 'test_set', other_class = False):
 
     """
     Apply the trained model to test dataset
@@ -125,13 +94,14 @@ def test_model(test_loader, device, model, loss_f, model_fn, other_class = False
             list_y_pred += output.argmax(1).tolist()
             list_y += labels.tolist()
             test_loss += loss_f(output, labels).item()
-            correct += (output.argmax(1) == labels).type(torch.float).sum().item()/1000
+            correct += (output.argmax(1) == labels).type(torch.float).sum().item()
     test_loss /= num_batches
     correct /= size
+
     print(f"Test : \n Accuracy: {(100 * correct):>0.1f}% \t Avg loss: {test_loss:>8f} \n")
     # Determination of other metrics
-    print(classification_report(list_y, list_y_pred, labels=np.unique(list_y)))
-    return correct, test_loss
+    
+    return correct, test_loss, list_y_pred,list_y
 
 
 def summary_training(model,annot_dir,labels_type,weights_loss, learning_rate, epochs, batch_size, other_class, bands):
@@ -191,7 +161,7 @@ def load_model(load_path):
     model_ = torch.load(load_path)
     return model_
 
-
+## DOESN'T WORK IN THIS LIBRARY
 def model_testing(model_fn, annot_dir, annot_path = 'test_set', other_face = False):
     df_test = pd.read_csv(annot_dir + annot_path + '.csv')
     if not other_face :
@@ -207,7 +177,7 @@ def model_testing(model_fn, annot_dir, annot_path = 'test_set', other_face = Fal
     test_model(test_loader, device, model=model, loss_f=loss_f, test_dir = annot_dir, model_fn = model_fn)
     
     
-def fold_loop(annot_dir, model, model_fn, weights_loss, train_loader, test_loader, learning_rate=1e-4, epochs=80):
+def fold_loop(annot_dir, model, model_dir,model_fn, weights_loss, train_loader, test_loader, learning_rate=1e-4, epochs=80):
     """
     Main to train a model given a certain number of epoch, a loss and an optimizer
 
@@ -239,12 +209,59 @@ def fold_loop(annot_dir, model, model_fn, weights_loss, train_loader, test_loade
         list_loss_train.append(train_loss.item())
 
     print("\nTesting model")
-    test_accu, test_loss = test_model(test_loader, device, model=model, loss_f=loss_f, model_fn = model_fn)
-
+    test_accu, test_loss, list_y_pred,list_y = test_model(test_loader, device, model=model,loss_f=loss_f, model_dir=model_dir,model_fn = model_fn)
+    
+    report = classification_report(list_y, list_y_pred, labels=np.unique(list_y))    
     df_res_train = pd.DataFrame({"Train accuracy":list_accu_train,"Train loss":list_loss_train})
     df_res_test = pd.DataFrame({"Test accuracy":test_accu,"Test loss":test_loss},index=[0])
-    return df_res_train,df_res_test
+    return df_res_train,df_res_test,report
     
+
+    
+def display_save_average_metrics(fig_dir, fig_fn):
+    """
+    After the training is done, the results are displayed and saved
+
+    :param fig_dir: path to save the figure and the data
+    :param list_accu_train: List of all accuracy during training
+    :param list_accu_valid: List of all accuracy during validation
+    :param list_loss_train: List of all loss during training
+    :param list_loss_valid: List of all loss during validation
+    :param name_figure: name to give to the figure
+    """
+    fig, axes = plt.subplots(ncols=2, figsize=(15, 7))
+    ax = axes.ravel()
+    list_nb = range(len(list_accu_train))
+    ax[0].plot(list_nb, list_accu_train, label='Train')
+    for a, b in zip(list_nb, list_accu_train):
+        ax[0].text(a, b, str(round(b, 1)))
+    ax[0].plot(list_nb, list_accu_valid, label='Valid')
+    for a, b in zip(list_nb, list_accu_valid):
+        ax[0].text(a, b, str(round(b, 1)))
+    ax[0].set_title('Accuracy given the epochs')
+    ax[0].set_xlabel('Epochs')
+    ax[0].set_ylabel('Accuracy (%)')
+    ax[0].legend()
+    ax[0].grid()
+
+    ax[1].plot(list_nb, list_loss_train, label='Train')
+    for a, b in zip(list_nb, list_loss_train):
+        ax[1].text(a, b, str(round(b, 2)))
+    ax[1].plot(list_nb, list_loss_valid, label='Valid')
+    for a, b in zip(list_nb, list_loss_valid):
+        ax[1].text(a, b, str(round(b, 2)))
+    ax[1].set_title('Loss given the epochs')
+    ax[1].set_xlabel('Epochs')
+    ax[1].set_ylabel('Loss')
+    ax[1].legend()
+    ax[1].grid()
+
+    fig.suptitle(fig_fn)  # Global title
+    fig.tight_layout()
+    plt.show()
+    fig.savefig(os.path.join(fig_dir, fig_fn+".png"), dpi=200, format='png')
+
+
 
 
 def k_folds(df,K):
@@ -306,10 +323,12 @@ def cross_validation(annot_dir, cnn, model_fn, labels_type, weights_loss, learni
         test_set = CustomDataset(df_test, annot_dir, labels_type)
         train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
         test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True, num_workers=0)
-        df_res_train,df_res_test = fold_loop(annot_dir, model, model_fn, weights_loss, train_loader, test_loader, learning_rate, epochs)
+        df_res_train,df_res_test,report = fold_loop(annot_dir, model, model_dir,model_fn, weights_loss, train_loader, test_loader, learning_rate, epochs)
         print("\nSaving train and test performances for the {}-th fold".format(k))
         df_res_train.to_csv(os.path.join(model_dir, model_fn +"_values_train"+str(k)+".csv"),index=False)
         df_res_test.to_csv(os.path.join(model_dir, model_fn +"_values_test"+str(k)+".csv"),index=False)
+        with open(os.path.join(model_dir, model_fn +"metrics_report"+str(k)+".txt"),'w') as report_file:
+            report_file.write(report)
 
         df_res_trains += df_res_train
         df_res_tests += df_res_test
@@ -318,6 +337,6 @@ def cross_validation(annot_dir, cnn, model_fn, labels_type, weights_loss, learni
     df_res_trains/=K
     df_res_tests/=K
     print("\nSaving train and test performances averaged over the {} folds".format(K))
-    df_res_train.to_csv(os.path.join(model_dir, model_fn +"_values_trains_averaged"+".csv"),index=False)
-    df_res_test.to_csv(os.path.join(model_dir, model_fn +"_values_tests_averaged"+".csv"),index=False)
+    df_res_trains.to_csv(os.path.join(model_dir, model_fn +"_values_trains_averaged"+".csv"),index=False)
+    df_res_tests.to_csv(os.path.join(model_dir, model_fn +"_values_tests_averaged"+".csv"),index=False)
     print("\Done")

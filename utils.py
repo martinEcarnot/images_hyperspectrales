@@ -10,7 +10,8 @@ from display_image import band_brightness
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import ast
-
+from PIL import Image
+import os
 
 def clean_annot_csv(annot_dir, annot_fn):
     """
@@ -92,30 +93,6 @@ def shuffle_leave_one_out(annot_dir, annot_fn='full_set', prop=[0.8, 0.2], var_t
     df_val.to_csv(annot_dir + 'validation_set.csv',index=False)
     df_test.to_csv(annot_dir + 'test_set.csv',index=False)
 
-#A changer 
-def shuffle_test_on_ext_img(annot_dir, annot_fn='full_set', prop=[0.8, 0.2]): 
-    df = pd.read_csv(annot_dir + annot_fn + '.csv')  
-    N = len(df)
-    shuffled_indexes = [i for i in df.loc[df['Species'] != species_test].index]
-    shuffle(shuffled_indexes)
-    train_idx = shuffled_indexes[:int(prop[0]*N)]
-    val_idx = shuffled_indexes[int(prop[0]*N):]
-    df_train = df.iloc[train_idx]
-    df_val = df.iloc[val_idx]
-    
-    df_train.to_csv(annot_dir + 'train_set.csv',index=False)
-    df_val.to_csv(annot_dir + 'validation_set.csv',index=False)
-    #df_test.to_csv(annot_dir + 'test_set.csv',index=False)
-
-    
-def list_csv_to_pd(liste, delimiter):
-    new_list = []
-    for j in liste :
-        if str(j)=='nan':
-            new_list.append(np.nan)
-        else:
-            new_list.append([int(i) for i in j.split(delimiter)])
-    return new_list
 
 
 def reconstitute_img(annot_dir_test_preds, annot_path_test_preds, img_folder):
@@ -150,7 +127,7 @@ def reconstitute_img(annot_dir_test_preds, annot_path_test_preds, img_folder):
     plt.show()
 
 
-def see_all_img(annot_dir, annot_path = 'full_set', img_folder = 'img/', preds = False, show_ind = False):
+def see_all_img(annot_dir, annot_path = 'full_set', img_folder = 'img/', labels_type = 'Face', preds = False, show_ind = False):
     df = pd.read_csv(annot_dir + annot_path + '.csv')
     df['Og_img'] = [df['Name_hdr'][i].split("_grain")[0] for i in range(len(df['Name_hdr']))]
     images_names = np.unique(np.array(df['Og_img']))
@@ -166,19 +143,23 @@ def see_all_img(annot_dir, annot_path = 'full_set', img_folder = 'img/', preds =
         fig.set_figheight(50)
         fig.set_figwidth(50)
         ax.xaxis.tick_top()
+        if labels_type == 'Species':
+                column = df['Species_pred']
+        elif labels_type == 'Face':
+                if preds :
+                    column = df['Face_pred']
+                else :
+                    column = df['Face']
+        lab = sorted(np.unique(column))
         for i in df_copy.index:
             bbox_list = ast.literal_eval(df['Bbox'][i])
             x1, y1, x2, y2 = bbox_list
-            if preds :
-                column = df['Face_pred']
-            else :
-                column = df['Face']
-            if column[i] == 0 :
+            if column[i] == lab[0] :
                 color = 'blue'
-            elif column[i] == 1 :
+            elif column[i] == lab[1] :
                 color = 'red'
             else :
-                color = 'green'
+                color = 'green'     
             ax.add_patch(patches.Rectangle((y1, x1), y2 - y1, x2 - x1, fill=False, edgecolor=color, lw=2))
             if preds :
                 plt.text(y2, x1, "{}".format(np.floor(max(ast.literal_eval(df['Probas'][i]))*100)/100), 
@@ -188,3 +169,5 @@ def see_all_img(annot_dir, annot_path = 'full_set', img_folder = 'img/', preds =
                      bbox={'facecolor' : color}, ha="left", va="bottom", fontsize = 16, color = 'w')
         plt.imshow(img_fin)
         plt.show()
+        fig.savefig(annot_dir + img_name + '_pred.png', dpi=200, format='png')
+        
