@@ -2,7 +2,7 @@ import torch.nn as nn
 
 class CNN_1(nn.Module):
     """
-    Creation of the neural network
+    Personal class of a light convolutional neural network
     """
 
     def __init__(self, dim_in):
@@ -27,9 +27,9 @@ class CNN_1(nn.Module):
         
     def forward(self, input_data):
         """
-        Order of the layers
+        Performs the forward pass of an input vector
         :param input_data: Input image
-        :return: a tensor of size (1, number of classes) (Softmax)
+        :return: a tensor of size (1, number of classes) containing the probabilities associated with each class.
         """
         x = self.pool(self.relu(self.conv1(input_data)))
         x = self.pool(self.relu(self.conv2(x)))
@@ -46,7 +46,7 @@ class CNN_1(nn.Module):
     
 class CNN_2(nn.Module):
     """
-    Creation of the neural network
+    Personal class of a medium convolutional neural network
     """
 
     def __init__(self, dim_in):
@@ -76,9 +76,9 @@ class CNN_2(nn.Module):
         
     def forward(self, input_data):
         """
-        Order of the layers
+        Performs the forward pass of an input vector
         :param input_data: Input image
-        :return: a tensor of size (1, number of classes) (Softmax)
+        :return: a tensor of size (1, number of classes) containing the probabilities associated with each class.
         """
         x = self.pool1(self.relu(self.conv1(input_data)))
         x = self.pool2(self.relu(self.conv2(x)))
@@ -103,7 +103,7 @@ class CNN_2(nn.Module):
 
 class CNN_3(nn.Module):
     """
-    Creation of the neural network
+    Personal class of a larger convolutional neural network
     """
 
     def __init__(self, dim_in):
@@ -133,9 +133,9 @@ class CNN_3(nn.Module):
         
     def forward(self, input_data):
         """
-        Order of the layers
+        Performs the forward pass of an input vector
         :param input_data: Input image
-        :return: a tensor of size (1, number of classes) (Softmax)
+        :return: a tensor of size (1, number of classes) containing the probabilities associated with each class.
         """
         x = self.pool1(self.relu(self.conv1(input_data)))
         x = self.pool2(self.relu(self.conv2(x)))
