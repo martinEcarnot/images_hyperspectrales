@@ -1,16 +1,18 @@
+import os
+import statistics
+from os import walk
+
 import cv2
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import spectral as sp
 import spectral.io.envi as envi
-import numpy as np
-from preprocessing import preprocessing, show_image
 from tqdm import tqdm
-import os
-from os import walk
-import statistics
-import pandas as pd
-import csv
+
+from preprocessing import preprocessing
 from utils import *
+
 
 def crop_image(img_dir, img_fn, out_dir, crop_idx_dim1=1300,
                bands = [i for i in range(216)], apply_mask=False, force_creation=False, verbose=True, sillon = True, defauts = [], autre_cat = []):

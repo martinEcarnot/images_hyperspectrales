@@ -1,7 +1,7 @@
 from preprocessing import *
 import cv2
 import statistics
-from os import walk
+import os
 
 
 def extract_features(path_in, filename, ext, crop_idx_dim1=1300, verbose=False):

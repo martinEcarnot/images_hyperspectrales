@@ -1,24 +1,42 @@
+import os
+
 import numpy as np
 import pandas as pd
-import os
-from os import walk
-import spectral as sp
 import torch
 import torch.nn as nn
 from matplotlib import pyplot as plt
-from torch.optim import Adam
-from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import classification_report
-import csv
+from torch.optim import Adam
+from torch.utils.data import DataLoader
 from torchinfo import summary
-from utils import *
+
 from cnns import *
-import random as rd
-from heapq import nsmallest
 from customdataset import CustomDataset
+from utils import *
 
 
 def summary_training(model, annot_dir, labels_type, weights_loss, learning_rate, epochs, batch_size, other_class, bands):
+    """Generates a summary of a training, and stores it in a .txt file.
+
+    :param model: model used for the training
+    :type model: torch.nn.Module
+    :param annot_dir: directory of the annotations files
+    :type annot_dir: str
+    :param labels_type: 'Face' for the face classification, 'Variety' for variety classification
+    :type labels_type: str
+    :param weights_loss: loss' weights associated to each class
+    :type weights_loss: list(float)
+    :param learning_rate: learning rate used for the training
+    :type learning_rate: float
+    :param epochs: number of epochs used for the training
+    :type epochs: int
+    :param batch_size: batch size used for the training
+    :type batch_size: int
+    :param other_class: in the case of a face classification, True implies the usage of the 3rd class 'Autre'
+    :type other_class: bool
+    :param bands: bands of the spectrum used for the training
+    :type bands: list(int)
+    """
     n_classes=0
     if labels_type=='Face':
         if other_class:
@@ -57,24 +75,6 @@ Classes' weights in the loss : {}'''.format(
     )
     return res
 
-def save_model(model_, save_path):
-    """
-    Save the model to a given path
-    :param model_: Model to save
-    :param save_path: Path to use
-    """
-    torch.save(model_, save_path)
-
-    
-def load_model(load_path):
-    """
-    Load a saved model
-    :param load_path: location of the model
-    :return: the model
-    """
-    model_ = torch.load(load_path)
-    return model_
-
 
 def display_save_figure(fig_dir, fig_fn, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid):
     """
@@ -112,6 +112,23 @@ def display_save_figure(fig_dir, fig_fn, list_accu_train, list_accu_valid, list_
     fig.savefig(os.path.join(fig_dir, fig_fn+".png"), dpi=200, format='png')
 
 def model_testing(model_fn, annot_dir, labels_type, annot_path = 'test_set', other_class = False, chosen_var = [], chosen_face = None):
+    """_summary_
+
+    :param model_fn: _description_
+    :type model_fn: _type_
+    :param annot_dir: _description_
+    :type annot_dir: _type_
+    :param labels_type: _description_
+    :type labels_type: _type_
+    :param annot_path: _description_, defaults to 'test_set'
+    :type annot_path: str, optional
+    :param other_class: _description_, defaults to False
+    :type other_class: bool, optional
+    :param chosen_var: _description_, defaults to []
+    :type chosen_var: list, optional
+    :param chosen_face: _description_, defaults to None
+    :type chosen_face: _type_, optional
+    """
     df_test = pd.read_csv(annot_dir + annot_path + '.csv')
     weight_loss = [2., 2., 2.]
     if not other_class :
@@ -225,7 +242,6 @@ def train_model(train_loader, val_loader, device, model, loss_f, optimizer, verb
 
 
 def test_model(test_loader, device, model, loss_f, test_dir, model_fn, labels_type, test_name = 'test_set', other_class = False, chosen_var = [], chosen_face = None):
-
     """
     Apply the trained model to test dataset
 
@@ -282,6 +298,13 @@ def test_model(test_loader, device, model, loss_f, test_dir, model_fn, labels_ty
 
 
 def get_metrics(preds_dir, preds_fn):
+    """_summary_
+
+    :param preds_dir: _description_
+    :type preds_dir: _type_
+    :param preds_fn: _description_
+    :type preds_fn: _type_
+    """
     df = pd.read_csv(preds_dir + preds_fn + '.csv')
     if df.columns[-1] == 'Face_pred':
         expected = df['Face']
@@ -401,7 +424,7 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
         os.mkdir(model_dir)
     model_path = os.path.join("models",model_fn,model_fn + ".pth")
     print("\nSaving model at ", model_path)
-    save_model(model, model_path)
+    torch.save(model, model_path)
     
     recap_path = os.path.join("models",model_fn,model_fn+"_summary.txt")
     with open(recap_path,'w') as recap_file:
