@@ -1,0 +1,44 @@
+TASK
+Directory used for annotations : img/cropped/RGB/
+Classification type : Face
+Number of classes : 2
+Bands used : [22, 53, 89]
+Number of bands : 3
+
+
+MODEL'S HYPERPARAMETERS
+Structure : 
+==========================================================================================
+Layer (type:depth-idx)                   Output Shape              Param #
+==========================================================================================
+CNN_1                                    [32, 2]                   --
+├─Conv2d: 1-1                            [32, 10, 200, 200]        1,480
+├─ReLU: 1-2                              [32, 10, 200, 200]        --
+├─MaxPool2d: 1-3                         [32, 10, 100, 100]        --
+├─Conv2d: 1-4                            [32, 15, 100, 100]        3,765
+├─ReLU: 1-5                              [32, 15, 100, 100]        --
+├─MaxPool2d: 1-6                         [32, 15, 50, 50]          --
+├─Conv2d: 1-7                            [32, 25, 50, 50]          3,400
+├─ReLU: 1-8                              [32, 25, 50, 50]          --
+├─MaxPool2d: 1-9                         [32, 25, 25, 25]          --
+├─Flatten: 1-10                          [32, 15625]               --
+├─Linear: 1-11                           [32, 10]                  156,260
+├─Dropout: 1-12                          [32, 10]                  --
+├─ReLU: 1-13                             [32, 10]                  --
+├─Linear: 1-14                           [32, 2]                   22
+├─Softmax: 1-15                          [32, 2]                   --
+==========================================================================================
+Total params: 164,927
+Trainable params: 164,927
+Non-trainable params: 0
+Total mult-adds (G): 3.38
+==========================================================================================
+Input size (MB): 15.36
+Forward/backward pass size (MB): 156.80
+Params size (MB): 0.66
+Estimated Total Size (MB): 172.82
+==========================================================================================
+Number of epochs : 80
+Learning rate : 0.0001
+Batch size : 32
+Classes' weights in the loss : [2.0, 2.0]

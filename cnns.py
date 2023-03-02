@@ -5,7 +5,7 @@ class CNN_1(nn.Module):
     Personal class of a light convolutional neural network
     """
 
-    def __init__(self, dim_in):
+    def __init__(self, dim_in, dim_out):
         """
         Initialisation of the layers
         :param dim_in: dimension of the input image
@@ -21,7 +21,7 @@ class CNN_1(nn.Module):
         self.flatten = nn.Flatten()
         self.linear1 = nn.Linear(25*25*25, 10)
         self.dropout = nn.Dropout(0.2)
-        self.linear2 = nn.Linear(10, 2)
+        self.linear2 = nn.Linear(10, dim_out)
 
         self.softmax = nn.Softmax(dim=1)
         
@@ -49,7 +49,7 @@ class CNN_2(nn.Module):
     Personal class of a medium convolutional neural network
     """
 
-    def __init__(self, dim_in):
+    def __init__(self, dim_in, dim_out):
         """
         Initialisation of the layers
         :param dim_in: dimension of the input image
@@ -70,7 +70,7 @@ class CNN_2(nn.Module):
         self.linear1 = nn.Linear(4*4*128, 100)
         self.dropout = nn.Dropout(0.2)
         self.linear2 = nn.Linear(100, 20)
-        self.linear3 = nn.Linear(20, 2)
+        self.linear3 = nn.Linear(20, dim_out)
 
         self.softmax = nn.Softmax(dim=1)
         
@@ -106,7 +106,7 @@ class CNN_3(nn.Module):
     Personal class of a larger convolutional neural network
     """
 
-    def __init__(self, dim_in):
+    def __init__(self, dim_in, dim_out):
         """
         Initialisation of the layers
         :param dim_in: dimension of the input image
@@ -116,7 +116,7 @@ class CNN_3(nn.Module):
         self.conv1 = nn.Conv2d(in_channels=dim_in, out_channels=32, kernel_size=(7, 7),padding=(2, 2),stride=(1, 1))
         self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(5, 5),stride=(1, 1),padding=(1, 1))
         self.conv3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(3, 3),stride=(1, 1),padding=(1, 1))
-        self.conv4 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3, 3),stride=(1, 1),padding=(1, 1))
+        self.conv4 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=(3, 3),stride=(1, 1),padding=(1, 1))
         self.conv5 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3, 3),stride=(1, 1),padding=(1, 1))
 
 
@@ -127,7 +127,7 @@ class CNN_3(nn.Module):
         self.linear1 = nn.Linear(4*4*256, 100)
         self.dropout = nn.Dropout(0.2)
         self.linear2 = nn.Linear(100, 30)
-        self.linear3 = nn.Linear(30, 2)
+        self.linear3 = nn.Linear(30, dim_out)
 
         self.softmax = nn.Softmax(dim=1)
         

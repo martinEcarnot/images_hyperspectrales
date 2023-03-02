@@ -17,3 +17,6 @@ images are stored. The address "D:\\Etude technique" is an example.
 The csv folder regroups every intermediate result done in order to accelerate 
 computing time by loading values already calculated.
 
+
+
+Lien tuto grdcam : https://debuggercafe.com/pytorch-class-activation-map-using-custom-trained-model/
