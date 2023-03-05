@@ -22,7 +22,7 @@ def summary_training(model, annot_dir, labels_type, weights_loss, learning_rate,
     :type model: torch.nn.Module
     :param annot_dir: directory of the annotations files
     :type annot_dir: str
-    :param labels_type: 'Face' for the face classification, 'Variety' for variety classification
+    :param labels_type: 'Face' for the face classification, 'Species' for species classification
     :type labels_type: str
     :param weights_loss: loss' weights associated to each class
     :type weights_loss: list(float)
@@ -77,16 +77,22 @@ Classes' weights in the loss : {}'''.format(
 
 
 def display_save_figure(fig_dir, fig_fn, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid):
-    """
-    After the training is done, the results are displayed and saved
+    """Display and save the accuracy and loss curves for train and validation data.
 
-    :param fig_dir: path to save the figure and the data
-    :param list_accu_train: List of all accuracy during training
-    :param list_accu_valid: List of all accuracy during validation
-    :param list_loss_train: List of all loss during training
-    :param list_loss_valid: List of all loss during validation
-    :param name_figure: name to give to the figure
+    :param fig_dir: directory which will contain the figure to be saved
+    :type fig_dir: str
+    :param fig_fn: filename of the figure to be saved
+    :type fig_fn: str
+    :param list_accu_train: list containing the train accuracy values over the epochs
+    :type list_accu_train: list(float)
+    :param list_accu_valid: list containing the validation accuracy values over the epochs
+    :type list_accu_valid: list(float)
+    :param list_loss_train: list containing the train loss values over the epochs
+    :type list_loss_train: list(float)
+    :param list_loss_valid: list containing the validation loss values over the epochs
+    :type list_loss_valid: list(float)
     """
+    
     fig, axes = plt.subplots(ncols=2, figsize=(15, 7))
     ax = axes.ravel()
     list_nb = range(len(list_accu_train))
@@ -111,17 +117,17 @@ def display_save_figure(fig_dir, fig_fn, list_accu_train, list_accu_valid, list_
     plt.show()
     fig.savefig(os.path.join(fig_dir, fig_fn+".png"), dpi=200, format='png')
 
-def model_testing(model_fn, annot_dir, labels_type, annot_path = 'test_set', other_class = False, chosen_var = [], chosen_face = None):
+def model_testing(model_fn, annot_dir, labels_type, test_annot_fn = 'test_set', other_class = False, chosen_var = [], chosen_face = None):
     """_summary_
 
-    :param model_fn: _description_
-    :type model_fn: _type_
-    :param annot_dir: _description_
-    :type annot_dir: _type_
-    :param labels_type: _description_
-    :type labels_type: _type_
-    :param annot_path: _description_, defaults to 'test_set'
-    :type annot_path: str, optional
+    :param model_fn: filename of the model to use
+    :type model_fn: str
+    :param annot_dir: directory of the annotations .csv files
+    :type annot_dir: str
+    :param labels_type: 'Face' if face classification, 'Species' if species classification
+    :type labels_type: str
+    :param test_annot_fn: filename of the test annotations csv file , defaults to 'test_set'
+    :type test_annot_fn: str, optional
     :param other_class: _description_, defaults to False
     :type other_class: bool, optional
     :param chosen_var: _description_, defaults to []
@@ -129,7 +135,7 @@ def model_testing(model_fn, annot_dir, labels_type, annot_path = 'test_set', oth
     :param chosen_face: _description_, defaults to None
     :type chosen_face: _type_, optional
     """
-    df_test = pd.read_csv(annot_dir + annot_path + '.csv')
+    df_test = pd.read_csv(annot_dir + test_annot_fn + '.csv')
     weight_loss = [2., 2., 2.]
     if not other_class :
         df_test = df_test.loc[df_test['Face']!=2]
@@ -155,17 +161,23 @@ def model_testing(model_fn, annot_dir, labels_type, annot_path = 'test_set', oth
         
         
 def train_model(train_loader, val_loader, device, model, loss_f, optimizer, verbose=False):
-    """
-    Loop to train the deep learning model.
-
-    :param train_loader: Dataloader of the training dataset
-    :param val_loader: Dataloader of the validation dataset
-    :param device: cpu or cuda
-    :param model: the CNN model
-    :param loss_f: the loss to consider
-    :param optimizer: optimizer (Adam)
-    :param verbose: Set to True to display the model parameters and information during training
-    :return: The trained model, accuracy training, accuracy validation, train_loss, valid_loss
+    """Performs one epoch of training and validation of a given model.
+    :param train_loader: DataLoader of the training dataset
+    :type train_loader: torch.utils.data.DataLoader
+    :param val_loader: DataLoader of the validation dataset
+    :type val_loader: torch.utils.data.DataLoader
+    :param device: device on which the training will be performed ('cuda' or 'cpu')
+    :type device: str
+    :param model: model to be trained
+    :type model: torch.nn.Module
+    :param loss_f: loss function used for the training
+    :type loss_f: torch.nn.functional
+    :param optimizer: optimizer used for the training (Adam)
+    :type optimizer: torch.optim
+    :param verbose: Set to True to display the model parameters and information during training, defaults to False
+    :type verbose: bool, optional
+    :return: The trained model, train accuracy, validation accuracy, train loss, validation loss
+    :rtype: tuple(torch.nn.Module, list(float), list(float), list(float), list(float))
     """
     
     train_loss, correct = 0, 0
@@ -242,15 +254,33 @@ def train_model(train_loader, val_loader, device, model, loss_f, optimizer, verb
 
 
 def test_model(test_loader, device, model, loss_f, test_dir, model_fn, labels_type, test_name = 'test_set', other_class = False, chosen_var = [], chosen_face = None):
+    """Performs a model inference on a test dataset and computes the metrics of performance, and saves them in a .csv file.
+    :param test_loader: test DataLoader used for testing
+    :type test_loader: torch.utils.data.DataLoader
+    :param device: device on which the test will be performed ('cuda' or 'cpu')
+    :type device: str
+    :param model: model to be trained
+    :type model: torch.nn.Module
+    :param loss_f: loss function used for the training
+    :type loss_f: torch.nn.functional
+    :param test_dir: _description_
+    :type test_dir: _type_
+    :param model_fn: filename of the testing's output
+    :type model_fn: str
+    :param labels_type: 'Face' for the face classification, 'Species' for species classification
+    :type labels_type: str
+    :param test_name: _description_, defaults to 'test_set'
+    :type test_name: str, optional
+    :param other_class: True if the class 'Autre' is considered, defaults to False
+    :type other_class: bool, optional
+    :param chosen_var: _description_, defaults to []
+    :type chosen_var: list, optional
+    :param chosen_face: _description_, defaults to None
+    :type chosen_face: _type_, optional
+    :return: accuracy and loss of the test
+    :rtype: tuple(float,float)
     """
-    Apply the trained model to test dataset
-
-    :param test_loader: test dataloader
-    :param device: cpu or cuda
-    :param model: model to use (CNN)
-    :param loss_f: the loss to consider
-    :return: Accuracy and loss of the test
-    """
+    
     size = len(test_loader.dataset)
     num_batches = len(test_loader)
     model.eval()
@@ -289,21 +319,25 @@ def test_model(test_loader, device, model, loss_f, test_dir, model_fn, labels_ty
         df_test['Face_pred'] = list_y_pred
     elif labels_type == 'Species':
         df_test['Species_pred'] = [chosen_var[i] for i in list_y_pred]
+    
+    #saving of the results
     df_test.to_csv('models/' + model_fn + '/test_preds.csv', index = False)
     print(f"Test : \n Accuracy: {(100 * correct):>0.1f}% \t Avg loss: {test_loss:>8f} \n")
+
     # Determination of other metrics
     print(classification_report(list_y, list_y_pred, labels=np.unique(list_y)))
     return 100*correct, test_loss
 
 
 
-def get_metrics(preds_dir, preds_fn):
-    """_summary_
+def compute_metrics(preds_dir, preds_fn):
+    """Computes the metrics of performances (loss, accuracy, recall, precision, f-score) of a training,
+    from a dataset containing both the labels and the predicted values, and stores them in a new .csv file
 
-    :param preds_dir: _description_
-    :type preds_dir: _type_
-    :param preds_fn: _description_
-    :type preds_fn: _type_
+    :param preds_dir: directory of the dataset
+    :type preds_dir: str
+    :param preds_fn: filename of the dataset
+    :type preds_fn: str
     """
     df = pd.read_csv(preds_dir + preds_fn + '.csv')
     if df.columns[-1] == 'Face_pred':
@@ -325,7 +359,31 @@ def get_metrics(preds_dir, preds_fn):
     df_metrics.to_csv(preds_dir + 'metrics.csv')   
 
     
-def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate, epochs=20, batch_size=12, other_class = False, chosen_var = [], chosen_face = None):
+def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate, epochs=50, batch_size=24, other_class = False, chosen_var = [], chosen_face = None):
+    """For a given model, performs many epochs of training and validation, and tests the model.
+
+    :param annot_dir: directory of the annotations .csv files
+    :type annot_dir: str
+    :param cnn: class of the used cnn
+    :type cnn: CNN_1,CNN_2 or CNN_3
+    :param model_fn: filename associated with the training
+    :type model_fn: str
+    :param labels_type: 'Face' for the face classification, 'Species' for species classification
+    :type labels_type: str
+    :param weights_loss: classes' weights used in the loss (one weight for each class)
+    :type weights_loss: list(float)
+    :param learning_rate: learning rate used for the training
+    :type learning_rate: float
+    :param epochs: number of epochs used for the training, defaults to 50
+    :type epochs: int, optional
+    :param batch_size: batch size used for the training, defaults to 24
+    :type batch_size: int, optional
+    :param other_class: True if the class 'Autre' is considered, defaults to False
+    :type other_class: bool, optional
+    :param chosen_var: _description_, defaults to []
+    :type chosen_var: list, optional
+    :param chosen_face: _description_, defaults to None
+    :type chosen_face: _type_, optional
     """
     Main to train a model given a certain number of epoch, a loss and an optimizer
 
@@ -336,7 +394,7 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
     :param learning_rate: Value for the exploration
     :param epochs: number of epochs used for training
     :param batch_size: number of image to process before updating parameters
-    """
+    
     n_classes = 3
     bands = []
     with open(annot_dir + 'bands.txt', "r") as f:
@@ -445,4 +503,3 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
 
 
     print("\nDone!")
-    

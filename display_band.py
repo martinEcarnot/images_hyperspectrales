@@ -1,8 +1,9 @@
+import time
+
 import cv2
 import matplotlib.pyplot as plt
-import spectral as sp
 import numpy as np
-import time
+import spectral as sp
 
 
 def band_brigthness(img, k):

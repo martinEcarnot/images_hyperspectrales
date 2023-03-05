@@ -1,19 +1,27 @@
 import torch.nn as nn
 
+
 class CNN_1(nn.Module):
     """
     Personal class of a light convolutional neural network
     """
 
     def __init__(self, dim_in, dim_out):
+        """Initialisation of the layers
+
+        :param dim_in: number of channels of the input image (3 for RGB, 216 for all bands)
+        :type dim_in: int
+        :param dim_out: number of classes to distinguish
+        :type dim_out: int
         """
-        Initialisation of the layers
-        :param dim_in: dimension of the input image
-        """
+        
         super().__init__()
-        self.conv1 = nn.Conv2d(in_channels=dim_in, out_channels=10, kernel_size=(7, 7),stride=(1,1),padding=(3,3))
-        self.conv2 = nn.Conv2d(in_channels=10, out_channels=15, kernel_size=(5, 5),stride=(1,1),padding=(2,2))
-        self.conv3 = nn.Conv2d(in_channels=15, out_channels=25, kernel_size=(3, 3),stride=(1, 1),padding=(1,1))
+        self.conv1 = nn.Conv2d(in_channels=dim_in, out_channels=10, kernel_size=(
+            7, 7), stride=(1, 1), padding=(3, 3))
+        self.conv2 = nn.Conv2d(in_channels=10, out_channels=15, kernel_size=(
+            5, 5), stride=(1, 1), padding=(2, 2))
+        self.conv3 = nn.Conv2d(in_channels=15, out_channels=25, kernel_size=(
+            3, 3), stride=(1, 1), padding=(1, 1))
 
         self.pool = nn.MaxPool2d(kernel_size=2)
         self.relu = nn.ReLU()
@@ -24,7 +32,7 @@ class CNN_1(nn.Module):
         self.linear2 = nn.Linear(10, dim_out)
 
         self.softmax = nn.Softmax(dim=1)
-        
+
     def forward(self, input_data):
         """
         Performs the forward pass of an input vector
@@ -42,8 +50,7 @@ class CNN_1(nn.Module):
         x = self.softmax(x)
         return x
 
-    
-    
+
 class CNN_2(nn.Module):
     """
     Personal class of a medium convolutional neural network
@@ -56,12 +63,16 @@ class CNN_2(nn.Module):
         """
         super().__init__()
 
-        self.conv1 = nn.Conv2d(in_channels=dim_in, out_channels=8, kernel_size=(7, 7),padding=(2, 2),stride=(1, 1))
-        self.conv2 = nn.Conv2d(in_channels=8, out_channels=16, kernel_size=(5, 5),stride=(1, 1),padding=(1, 1))
-        self.conv3 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(3, 3),stride=(1, 1),padding=(1, 1))
-        self.conv4 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(3, 3),stride=(1, 1),padding=(1, 1))
-        self.conv5 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(3, 3),stride=(1, 1),padding=(1, 1))
-
+        self.conv1 = nn.Conv2d(in_channels=dim_in, out_channels=8, kernel_size=(
+            7, 7), padding=(2, 2), stride=(1, 1))
+        self.conv2 = nn.Conv2d(in_channels=8, out_channels=16, kernel_size=(
+            5, 5), stride=(1, 1), padding=(1, 1))
+        self.conv3 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(
+            3, 3), stride=(1, 1), padding=(1, 1))
+        self.conv4 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(
+            3, 3), stride=(1, 1), padding=(1, 1))
+        self.conv5 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(
+            3, 3), stride=(1, 1), padding=(1, 1))
 
         self.pool1 = nn.MaxPool2d(kernel_size=3)
         self.pool2 = nn.MaxPool2d(kernel_size=2)
@@ -73,7 +84,7 @@ class CNN_2(nn.Module):
         self.linear3 = nn.Linear(20, dim_out)
 
         self.softmax = nn.Softmax(dim=1)
-        
+
     def forward(self, input_data):
         """
         Performs the forward pass of an input vector
@@ -86,7 +97,6 @@ class CNN_2(nn.Module):
         x = self.pool2(self.relu(self.conv4(x)))
         x = self.pool2(self.relu(self.conv5(x)))
         x = self.flatten(x)
-        
 
         x = self.linear1(x)
         x = self.dropout(x)
@@ -96,10 +106,9 @@ class CNN_2(nn.Module):
         x = self.relu(x)
         x = self.linear3(x)
 
-
         x = self.softmax(x)
         return x
-    
+
 
 class CNN_3(nn.Module):
     """
@@ -113,12 +122,16 @@ class CNN_3(nn.Module):
         """
         super().__init__()
 
-        self.conv1 = nn.Conv2d(in_channels=dim_in, out_channels=32, kernel_size=(7, 7),padding=(2, 2),stride=(1, 1))
-        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(5, 5),stride=(1, 1),padding=(1, 1))
-        self.conv3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(3, 3),stride=(1, 1),padding=(1, 1))
-        self.conv4 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=(3, 3),stride=(1, 1),padding=(1, 1))
-        self.conv5 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3, 3),stride=(1, 1),padding=(1, 1))
-
+        self.conv1 = nn.Conv2d(in_channels=dim_in, out_channels=32, kernel_size=(
+            7, 7), padding=(2, 2), stride=(1, 1))
+        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(
+            5, 5), stride=(1, 1), padding=(1, 1))
+        self.conv3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(
+            3, 3), stride=(1, 1), padding=(1, 1))
+        self.conv4 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=(
+            3, 3), stride=(1, 1), padding=(1, 1))
+        self.conv5 = nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(
+            3, 3), stride=(1, 1), padding=(1, 1))
 
         self.pool1 = nn.MaxPool2d(kernel_size=3)
         self.pool2 = nn.MaxPool2d(kernel_size=2)
@@ -130,7 +143,7 @@ class CNN_3(nn.Module):
         self.linear3 = nn.Linear(30, dim_out)
 
         self.softmax = nn.Softmax(dim=1)
-        
+
     def forward(self, input_data):
         """
         Performs the forward pass of an input vector
@@ -143,7 +156,6 @@ class CNN_3(nn.Module):
         x = self.pool2(self.relu(self.conv4(x)))
         x = self.pool2(self.relu(self.conv5(x)))
         x = self.flatten(x)
-        
 
         x = self.linear1(x)
         x = self.dropout(x)
@@ -153,8 +165,5 @@ class CNN_3(nn.Module):
         x = self.relu(x)
         x = self.linear3(x)
 
-
         x = self.softmax(x)
         return x
-
-

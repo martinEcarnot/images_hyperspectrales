@@ -1,16 +1,16 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import cv2 as cv
-import os
+import matplotlib.patches as patches
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import spectral as sp
 import spectral.io.envi as envi
 from skimage.measure import label, regionprops
-import matplotlib.patches as patches
-from brightest_band import retrieve_all_brightest_bands_to_csv
 from tqdm import tqdm
-import pandas as pd
+
+from brightest_band import retrieve_all_brightest_bands_to_csv
 from display_image import band_brightness
-import cv2
+
 
 def show_image(img):
     """
@@ -227,7 +227,7 @@ def preprocessing(img_dir, img_fn, crop_idx_dim1=1300, thresh_refl=0.15, area_ra
     img_r = img_init[:, :, 22] / band_brightness(img_init, 22)
     img_g = img_init[:, :, 53] / band_brightness(img_init, 53)
     img_b = img_init[:, :, 89] / band_brightness(img_init, 89)
-    img_fin = np.fliplr(cv2.rotate(np.dstack((img_b, img_g, img_r)), cv2.ROTATE_90_CLOCKWISE))
+    img_fin = np.fliplr(cv.rotate(np.dstack((img_b, img_g, img_r)), cv.ROTATE_90_CLOCKWISE))
     
     if verbose:
         fig, ax = plt.subplots()
