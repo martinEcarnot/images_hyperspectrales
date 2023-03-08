@@ -88,15 +88,50 @@ Deep learning training, testing, saving model (optimizer and loss directly
 # main_loop(use_path, weight_loss, learning_rate, epochs=epochs, batch_size=12)
 
 from preprocessing import *
+from display_image import *
 
-Path = 'img/'
-Path = r'D:/EtudeTechnique_INRAE_IMAGES/'
+#Path = 'img/'
+#Path = r'D:/EtudeTechnique_INRAE_IMAGES/'
 #file = "var1_2020_x75y20_8000_us_2x_2022-04-26T122543_corr"
-#file = "var1_2020_x75y20_8000_us_2x_2022-04-26T130045_corr"
+#file = "var2_2020_x73y16_8000_us_2x_2022-04-26T104203_corr"
 #file = "var4_2020_x82y12_8000_us_2x_2022-04-27T092007_corr"
 #file = 'var4_2020_x82y12_8000_us_2x_2022-04-27T093216_corr'
-file = 'var7_x82y19_8000_us_2x_2022-04-26T084832_corr'
-preprocessing(Path, file)
+#file = 'var7_x82y19_8000_us_2x_2022-04-26T084832_corr'
+
+#display_img(Path, 'var4_2020_x82y12_8000_us_2x_2022-04-27T092007_corr')
+#display_img(Path, 'var4_2020_x82y12_8000_us_2x_2022-04-27T093216_corr')
+
+#preprocessing(Path, file)
 
 #crop_image(Path, Path + 'cropped/', file, ext = '.hdr', force_creation=True, 
            #sillon = True, liste_grains_defauts = [0, 1, 15, 31, 52, 53, 55, 59, 67])
+
+import pandas as pd
+import numpy as np
+
+def get_metrics(pred_path, path_out):
+    df = pd.read_csv(pred_path)
+    if df.columns[-1] == 'Face_pred':
+        expected = df['Face']
+        preds = df['Face_pred']
+    elif df.columns[-1] == 'Species_pred':
+        expected = df['Species']
+        preds = df['Species_pred']
+    labels = np.unique(expected)
+    liste_precision = []
+    liste_recall = []
+    for i in labels:
+        prec = np.floor(len(df.loc[(preds==i) & (expected==i)]) / len(df.loc[preds==i])*100)/100
+        rec =  np.floor(len(df.loc[(preds==i) & (expected==i)]) / len(df.loc[expected==i])*100)/100
+        liste_precision.append(prec)
+        liste_recall.append(rec)  
+    df_metrics = pd.DataFrame({'Precision' : liste_precision, 'Recall' : liste_recall})
+    df_metrics.index = labels
+    df_metrics.to_csv(path_out)
+    
+
+
+
+
+#get_metrics('test_preds.csv', 'metrics.csv')
+

@@ -237,11 +237,11 @@ def preprocessing(folder_path, s_img, crop_idx_dim1=1300, thresh_refl=0.15, area
         for i in range(len(array_bbox)):
             x1, y1, x2, y2 = array_bbox[i]
             
-            ax.add_patch(patches.Rectangle((y1, x1), y2 - y1, x2 - x1, fill=False, edgecolor='blue', lw=2))
+            ax.add_patch(patches.Rectangle((y1, x1), y2 - y1, x2 - x1, fill=False, edgecolor='green', lw=2))
            
             yc, xc = coord_centroids[i]
             plt.text(y2, x1, "{},\n({}, {})".format(i, int(yc), int(xc + crop_idx_dim1)), 
-                     bbox={'facecolor':'b'}, ha="left", va="bottom", fontsize = 6, color = 'w')
+                     bbox={'facecolor':'g'}, ha="left", va="bottom", fontsize = 6, color = 'w')
         plt.imshow(img_fin)
         plt.show()
 
