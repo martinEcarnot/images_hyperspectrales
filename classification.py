@@ -117,7 +117,7 @@ def display_save_figure(fig_dir, fig_fn, list_accu_train, list_accu_valid, list_
     plt.show()
     fig.savefig(os.path.join(fig_dir, fig_fn+".png"), dpi=200, format='png')
 
-def model_testing(model_fn, annot_dir, labels_type, test_annot_fn = 'test_set', other_class = False, chosen_var = [], chosen_face = None):
+def model_testing(model_fn, annot_dir, labels_type, test_annot_fn = 'test_set', other_class = False, chosen_species = [], chosen_face = None):
     """_summary_
 
     :param model_fn: filename of the model to use
@@ -130,10 +130,10 @@ def model_testing(model_fn, annot_dir, labels_type, test_annot_fn = 'test_set', 
     :type test_annot_fn: str, optional
     :param other_class: _description_, defaults to False
     :type other_class: bool, optional
-    :param chosen_var: _description_, defaults to []
-    :type chosen_var: list, optional
-    :param chosen_face: _description_, defaults to None
-    :type chosen_face: _type_, optional
+    :param chosen_species: list of all the species we want to use for the training, defaults to []
+    :type chosen_species: list(int), optional
+    :param chosen_face: 'Dos' or 'Sillon' if we want to train exclusively on one face, defaults to None
+    :type chosen_face: str, defaults to None
     """
     df_test = pd.read_csv(annot_dir + test_annot_fn + '.csv')
     weight_loss = [2., 2., 2.]
@@ -141,9 +141,9 @@ def model_testing(model_fn, annot_dir, labels_type, test_annot_fn = 'test_set', 
         df_test = df_test.loc[df_test['Face']!=2]
         weight_loss = [2., 2.]
     if labels_type == 'Species' :
-        if len(chosen_var)==0:
-            chosen_var = [i for i in range(8)]
-        df_test = df_test.loc[df_test['Species'].isin(chosen_var)]
+        if len(chosen_species)==0:
+            chosen_species = [i for i in range(8)]
+        df_test = df_test.loc[df_test['Species'].isin(chosen_species)]
         
         if chosen_face == 'Dos' :
             df_test = df_test.loc[df_test['Face']==0]
@@ -156,7 +156,7 @@ def model_testing(model_fn, annot_dir, labels_type, test_annot_fn = 'test_set', 
     model = torch.load(os.path.join('models', model_fn, model_fn + '.pth'))
     weight = torch.tensor(weight_loss).to(device)
     loss_f = nn.CrossEntropyLoss(weight=weight)
-    test_model(test_loader, device, model=model, loss_f=loss_f, test_dir = annot_dir, model_fn = model_fn, labels_type = labels_type, other_class = other_class, chosen_var = chosen_var)
+    test_model(test_loader, device, model=model, loss_f=loss_f, test_dir = annot_dir, model_fn = model_fn, labels_type = labels_type, other_class = other_class, chosen_species = chosen_species)
        
         
         
@@ -253,7 +253,7 @@ def train_model(train_loader, val_loader, device, model, loss_f, optimizer, verb
 
 
 
-def test_model(test_loader, device, model, loss_f, test_dir, model_fn, labels_type, test_name = 'test_set', other_class = False, chosen_var = [], chosen_face = None):
+def test_model(test_loader, device, model, loss_f, test_dir, model_fn, labels_type, test_name = 'test_set', other_class = False, chosen_species = [], chosen_face = None):
     """Performs a model inference on a test dataset and computes the metrics of performance, and saves them in a .csv file.
     :param test_loader: test DataLoader used for testing
     :type test_loader: torch.utils.data.DataLoader
@@ -273,10 +273,11 @@ def test_model(test_loader, device, model, loss_f, test_dir, model_fn, labels_ty
     :type test_name: str, optional
     :param other_class: True if the class 'Autre' is considered, defaults to False
     :type other_class: bool, optional
-    :param chosen_var: _description_, defaults to []
-    :type chosen_var: list, optional
-    :param chosen_face: _description_, defaults to None
-    :type chosen_face: _type_, optional
+    :param chosen_species: list of all the species we want to use for the training, defaults to []
+    :type chosen_species: list(int), optional
+    :param chosen_face: 'Dos' or 'Sillon' if we want to train exclusively on one face, defaults to None
+    :type chosen_face: str, defaults to None
+    
     :return: accuracy and loss of the test
     :rtype: tuple(float,float)
     """
@@ -305,9 +306,9 @@ def test_model(test_loader, device, model, loss_f, test_dir, model_fn, labels_ty
     if not other_class :
         df_test = df_test.loc[df_test['Face']!=2]
     if labels_type == 'Species' :
-        if len(chosen_var)==0:
-            chosen_var = [i for i in range(8)]
-        df_test = df_test.loc[df_test['Species'].isin(chosen_var)]
+        if len(chosen_species)==0:
+            chosen_species = [i for i in range(8)]
+        df_test = df_test.loc[df_test['Species'].isin(chosen_species)]
         df_test.index = [i for i in range(len(df_test))]
         if chosen_face == 'Dos' :
             df_test = df_test.loc[df_test['Face']==0]
@@ -318,7 +319,7 @@ def test_model(test_loader, device, model, loss_f, test_dir, model_fn, labels_ty
     if labels_type == 'Face' :
         df_test['Face_pred'] = list_y_pred
     elif labels_type == 'Species':
-        df_test['Species_pred'] = [chosen_var[i] for i in list_y_pred]
+        df_test['Species_pred'] = [chosen_species[i] for i in list_y_pred]
     
     #saving of the results
     df_test.to_csv('models/' + model_fn + '/test_preds.csv', index = False)
@@ -359,7 +360,7 @@ def compute_metrics(preds_dir, preds_fn):
     df_metrics.to_csv(preds_dir + 'metrics.csv')   
 
     
-def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate, epochs=50, batch_size=24, other_class = False, chosen_var = [], chosen_face = None):
+def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate, epochs=50, batch_size=24, other_class = False, chosen_species = [], chosen_face = None):
     """For a given model, performs many epochs of training and validation, and tests the model.
 
     :param annot_dir: directory of the annotations .csv files
@@ -380,11 +381,11 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
     :type batch_size: int, optional
     :param other_class: True if the class 'Autre' is considered, defaults to False
     :type other_class: bool, optional
-    :param chosen_var: _description_, defaults to []
-    :type chosen_var: list, optional
+    :param chosen_species: list containing the , defaults to []
+    :type chosen_species: list(int)
     :param chosen_face: _description_, defaults to None
     :type chosen_face: _type_, optional
-    """
+    
     Main to train a model given a certain number of epoch, a loss and an optimizer
 
     :param cnn: class of the CNN to be used.
@@ -394,6 +395,7 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
     :param learning_rate: Value for the exploration
     :param epochs: number of epochs used for training
     :param batch_size: number of image to process before updating parameters
+    """
     
     n_classes = 3
     bands = []
@@ -413,15 +415,15 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
         df_train = df_train.loc[df_train['Face']!=2]
         n_classes = 2
     if labels_type == 'Species' :
-        if len(chosen_var)==0:
-            chosen_var = [i for i in range(8)]
-        print("Variétés que l'on va chercher à différencier : " + str(chosen_var)[1:-1])
-        df_train = df_train.loc[df_train['Species'].isin(chosen_var)]
+        if len(chosen_species)==0:
+            chosen_species = [i for i in range(8)]
+        print("Variétés que l'on va chercher à différencier : " + str(chosen_species)[1:-1])
+        df_train = df_train.loc[df_train['Species'].isin(chosen_species)]
         if chosen_face == 'Dos' :
             df_train = df_train.loc[df_train['Face']==0]
         elif chosen_face == 'Sillon' :
             df_train = df_train.loc[df_train['Face']==1]
-        n_classes = len(chosen_var)
+        n_classes = len(chosen_species)
     df_train.index = [i for i in range(len(df_train))]
     train_set = CustomDataset(df_train, annot_dir, labels_type)
     train_loader = DataLoader(train_set, batch_size=batch_size, num_workers=0)
@@ -431,7 +433,7 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
         df_valid = df_valid.loc[df_valid['Face']!=2]
         df_valid.index = [i for i in range(len(df_valid))]
     if labels_type == 'Species' :
-        df_valid = df_valid.loc[df_valid['Species'].isin(chosen_var)]
+        df_valid = df_valid.loc[df_valid['Species'].isin(chosen_species)]
         if chosen_face == 'Dos' :
             df_valid = df_valid.loc[df_valid['Face']==0]
         elif chosen_face == 'Sillon' :
@@ -445,7 +447,7 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
     if not other_class :
         df_test = df_test.loc[df_test['Face']!=2]
     if labels_type == 'Species' :
-        df_test = df_test.loc[df_test['Species'].isin(chosen_var)]
+        df_test = df_test.loc[df_test['Species'].isin(chosen_species)]
         if chosen_face == 'Dos' :
             df_test = df_test.loc[df_test['Face']==0]
         elif chosen_face == 'Sillon' :
@@ -492,7 +494,7 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
     display_save_figure(model_dir, fig_fn, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid)
 
     print("\nTesting model")
-    test_accu, test_loss = test_model(test_loader, device, model=model, loss_f=loss_f, test_dir = annot_dir, model_fn = model_fn, labels_type = labels_type, other_class = other_class, chosen_var = chosen_var, chosen_face = chosen_face)
+    test_accu, test_loss = test_model(test_loader, device, model=model, loss_f=loss_f, test_dir = annot_dir, model_fn = model_fn, labels_type = labels_type, other_class = other_class, chosen_species = chosen_species, chosen_face = chosen_face)
 
     # Saving values
     print("\nSaving values of train, validation and test loops")

@@ -292,7 +292,7 @@ def create_mask(im_bar, array_bbox_bar_res, list_regions_bar):
         list_mask.append(mask)
     return list_mask
 
-
+#Non utilisé pour l'et 2023
 def watershed():
     """
     Function to try watershed algorithm

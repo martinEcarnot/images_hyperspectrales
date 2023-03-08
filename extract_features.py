@@ -2,7 +2,8 @@ from preprocessing import *
 import cv2
 import statistics
 import os
-
+import spectral as sp
+import numpy as np
 
 def extract_features(path_in, filename, ext, crop_idx_dim1=1300, verbose=False):
     """
@@ -97,18 +98,18 @@ def save_reflectance_spectralon(use_path, crop_idx_dim1=1300):
     :param use_path: Global path where all hyperspectral images are
     :param crop_idx_dim1: index of the edge of the graph paper
     """
-    path = os.path.join(use_path, "")
-    all_files = next(walk(path), (None, None, []))[2]  # Detect only the files, not the folders
+    
+    all_files = next(os.walk(use_path), (None, None, []))[2]  # Detect only the files, not the folders
     hdr_files = [x for x in all_files if "hdr" in x]  # Extract hdr files
 
     for num, file in enumerate(hdr_files):
         print(f"\nImage progression: {num+1}/{len(hdr_files)}\n")
-        img = sp.open_image(os.path.join(path + file))
+        img = sp.open_image(os.path.join(use_path + file))
         # Retrieve values to convert grain image to reflectance
         array_ref = reflectance_grain(img, crop_idx_dim1-350, 1)  # -350 to remove graph paper, 1 for all bands
 
         # Save
-        np.savetxt(os.path.join(path, "csv", "lum_spectralon_" + file[:-4] + ".csv"), array_ref, delimiter=",",
+        np.savetxt(os.path.join(use_path, "csv", "lum_spectralon_" + file[:-4] + ".csv"), array_ref, delimiter=",",
                    fmt='%1.1f')
 
 

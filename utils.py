@@ -44,20 +44,28 @@ def read_all_annot_csv(annot_dir, out_fn='full_set',clean=True):
                 clean_annot_csv(annot_dir, file.split('.')[0])
             df = pd.read_csv(path)
             df_tot = pd.concat([df_tot,df])
-    df_tot.to_csv(annot_dir+out_fn+'.csv',index=False)
+    df_tot.to_csv(annot_dir + out_fn + '.csv', index=False)
 
 
-def shuffle_full(annot_dir, annot_fn,out_dir):
+def shuffle_full_set(annot_dir, annot_fn, out_dir):
+    """
+    Automatically executed during cross vlidation ; simply shuffles the full set
+    without further dividing it into multiple datasets
+    """
     df_full = pd.read_csv(annot_dir + annot_fn + '.csv')
     N = len(df_full)
     shuffled_indexes = [i for i in range(N)]
     shuffle(shuffled_indexes)
     df_full = df_full.iloc[shuffled_indexes]
-    df_full.to_csv(join(out_dir,annot_fn + '.csv'),index=False)
+    df_full.to_csv(join(out_dir, annot_fn + '.csv'), index=False)
 
 
-def shuffle_train_val_test(annot_dir, annot_fn='full_set', prop=[0.7, 0.15, 0.15]):  #prop = [0.7, 0.15, 0.15]
-    df = pd.read_csv(annot_dir + annot_fn + '.csv')
+
+def shuffle_train_val_test(annot_dir, prop=[0.7, 0.15, 0.15]):
+    """
+    Classic shuffle : 70% of data go into train set, 15% into validation_set, 15% into test_set
+    """
+    df = pd.read_csv('img/cropped/full_set.csv')
     N = len(df)
     shuffled_indexes = [i for i in range(N)]
     shuffle(shuffled_indexes)
@@ -75,16 +83,21 @@ def shuffle_train_val_test(annot_dir, annot_fn='full_set', prop=[0.7, 0.15, 0.15
     
 
 
+ 
+def shuffle_leave_one_out(annot_dir, prop=[0.8, 0.2], spec_test = None): 
+    """
+    Select one specie for the test set ; the others are shuffled betxeen train nd val sets
+    Possibility to choose the specie to leave out (parameter 'spec_test'). 
+    By default, the specie to leave out is chosen randomly
+    """  
+    df = pd.read_csv('img/cropped/full_set.csv')
+    if spec_test == None or spec_test not in [i for i in range(1, 9)]:
+        spec_test = rd.randint(1, 8)
+    df_test = df.loc[df['Species'] == spec_test]
     
-def shuffle_leave_one_out(annot_dir, annot_fn='full_set', prop=[0.8, 0.2], var_test = None): 
-    df = pd.read_csv(annot_dir + annot_fn + '.csv')
-    if var_test == None or var_test not in [i for i in range(1, 9)]:
-        var_test = rd.randint(1, 8)
-    df_test = df.loc[df['Species'] == var_test]
-    #df = df.loc[df['Species'] != var_test]
     
-    print("Variété exclue de l'entraïnement : Variété " + str(var_test))
-    shuffled_indexes = [i for i in df.loc[df['Species'] != var_test].index]
+    print("Espèce exclue de l'entraïnement : Espèce " + str(spec_test))
+    shuffled_indexes = [i for i in df.loc[df['Species'] != spec_test].index]
     N = len(shuffled_indexes)
     shuffle(shuffled_indexes)
     train_idx = shuffled_indexes[:int(prop[0]*N)]

@@ -98,6 +98,8 @@ def crop_all_images(path_img, path_out, path_defauts, bands = [i for i in range(
     of a folder entitled with the number of bands
 
     :param path_img: path where all hyperspectral images are stored
+    :param path_out: path where all cropped images are going to be stored
+    :param path_defauts: path where the csv with the list of all missclassified grains
     :param band_step: step between two wave bands ( if set to 2, takes one out of two bands)
     :param crop_idx_dim1: index of the edge of the graph paper
     :param apply_mask: bool to apply convex mask to the grain in order to keep only the grain, no background
@@ -131,6 +133,8 @@ def crop_all_images(path_img, path_out, path_defauts, bands = [i for i in range(
                    apply_mask=apply_mask, force_creation=force_creation, verbose=verbose,sillon = sillon, defauts = defauts, autre_cat = autre_cat)
 
 
+
+#Date de l'étude technique 2022, pas utilisé pour l'et 2023
 def get_grain_size(path_in, crop_idx_dim1=1300, verbose=False):
     """
     Display the comparison between grain size of all images

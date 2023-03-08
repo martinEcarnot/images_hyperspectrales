@@ -31,7 +31,7 @@ main_loop(annot_dir = annot_dir, cnn = CNN_3, model_fn = model_name, labels_type
 """
 
 
-def display_save_figure(fig_dir, fig_fn, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid):
+#def display_save_figure(fig_dir, fig_fn, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid):
 
 
 cnn = CNN_2
