@@ -44,15 +44,15 @@ def read_all_annot_csv(annot_dir, out_fn='full_set',clean=True):
                 clean_annot_csv(annot_dir, file.split('.')[0])
             df = pd.read_csv(path)
             df_tot = pd.concat([df_tot,df])
-    df_tot.to_csv(annot_dir + out_fn + '.csv', index=False)
+    df_tot.to_csv('img/cropped/full_set.csv', index=False)
 
 
-def shuffle_full_set(annot_dir, annot_fn, out_dir):
+def shuffle_full_set(annot_fn, out_dir):
     """
     Automatically executed during cross vlidation ; simply shuffles the full set
     without further dividing it into multiple datasets
     """
-    df_full = pd.read_csv(annot_dir + annot_fn + '.csv')
+    df_full = pd.read_csv('img/cropped/full_set.csv')
     N = len(df_full)
     shuffled_indexes = [i for i in range(N)]
     shuffle(shuffled_indexes)
@@ -111,8 +111,15 @@ def shuffle_leave_one_out(annot_dir, prop=[0.8, 0.2], spec_test = None):
 
 
 
-def reconstitute_img(annot_dir_test_preds, annot_path_test_preds, img_folder):
-    df = pd.read_csv(annot_dir_test_preds + annot_path_test_preds + '.csv')
+def reconstitute_img(annot_dir_test_preds, annot_fn_test_preds, img_folder):
+    """
+    Reconstitute a random macro_images from those which have at least one grain in the test_set,
+    and shows the predictions with boxes (blue for back, red for furrow and green for others)
+    :param annot_dir_test_preds: folder where the annotations are located
+    :param annot_fn_test_preds: name of the file containing the preds (generally 'test_preds.csv')
+    :param img_folder: folder where are located the large images
+    """  
+    df = pd.read_csv(annot_dir_test_preds + annot_fn_test_preds + '.csv')
     idx = rd.randint(0, len(df['Name_hdr']))
     img_name = df['Name_hdr'][idx].split("_grain")[0]
     df['Og_img'] = [df['Name_hdr'][i].split("_grain")[0] for i in range(len(df['Name_hdr']))]
@@ -143,8 +150,19 @@ def reconstitute_img(annot_dir_test_preds, annot_path_test_preds, img_folder):
     plt.show()
 
 
-def see_all_img(annot_dir, annot_path = 'full_set', img_folder = 'img/', labels_type = 'Face', preds = False, show_ind = False):
-    df = pd.read_csv(annot_dir + annot_path + '.csv')
+def see_all_img(annot_dir, annot_fn, img_folder = 'img/', labels_type = 'Face', 
+                preds = False, show_ind = False, save_figs = False):
+    """
+    Reconstitute all large images and shows either the predictions from a model or the original annotations
+    :param annot_dir: folder where the annotations are located
+    :param annot_fn: name of the file containing the preds (generally 'test_preds.csv')
+    :param img_folder: folder where are located the large images
+    :param labels_type: 'Face' (default) or 'Species'
+    :param preds: if False (default), show the original annotations, else show the predictions from the selected model
+    :param show_ind: whether to show the index of the grain in the bboxes, doesn't show by default
+    :param save_figs: whether or not to save reconstituted images in the annot_dir, doesn't save by default
+    """  
+    df = pd.read_csv(annot_dir + annot_fn + '.csv')
     df['Og_img'] = [df['Name_hdr'][i].split("_grain")[0] for i in range(len(df['Name_hdr']))]
     images_names = np.unique(np.array(df['Og_img']))
     for img_name in images_names :
@@ -185,5 +203,6 @@ def see_all_img(annot_dir, annot_path = 'full_set', img_folder = 'img/', labels_
                      bbox={'facecolor' : color}, ha="left", va="bottom", fontsize = 16, color = 'w')
         plt.imshow(img_fin)
         plt.show()
-        fig.savefig(annot_dir + img_name + '_pred.png', dpi=200, format='png')
+        if save_figs :
+            fig.savefig(annot_dir + img_name + '_pred.png', dpi=200, format='png')
         

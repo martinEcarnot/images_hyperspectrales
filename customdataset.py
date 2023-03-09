@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
+from heapq import nsmallest
 
 class CustomDataset(Dataset):
     """
@@ -20,6 +21,11 @@ class CustomDataset(Dataset):
         self.names_hdr = df_annot["Name_hdr"]
         self.annot_dir = annot_dir
         self.labels = df_annot[labels_type]
+        if labels_type == 'Species' :
+            N = len(np.unique(self.labels))
+            ordered = nsmallest(N, np.unique(self.labels))
+            for i in range(N) :
+                self.labels = self.labels.replace(ordered[i], i)
         
     def __len__(self):
         """

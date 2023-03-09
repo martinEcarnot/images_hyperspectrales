@@ -267,13 +267,15 @@ def k_folds(df, K):
     return ens
 
 
-def cross_validation(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate=1e-4, epochs=80, batch_size=12, other_class=False, K=5):
+def cross_validation(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate=1e-4, epochs=80,
+                     batch_size=12, other_class=False, K=5, chosen_species = [], chosen_face = []):
     model_dir = os.path.join("models", model_fn)
     if not(os.path.exists(model_dir)):
         os.mkdir(model_dir)
-    shuffle_full(annot_dir, "full_set", model_dir)
+    shuffle_full_set("full_set", model_dir)
     df_full = pd.read_csv(os.path.join(model_dir, "full_set"+".csv"))
-
+    
+    n_classes = 3
     bands = []
     with open(annot_dir + 'bands.txt', "r") as f:
         first_line = f.readline()
@@ -283,18 +285,32 @@ def cross_validation(annot_dir, cnn, model_fn, labels_type, weights_loss, learni
         elif second_line[:3] == 'All':
             bands = [i for i in range(216)]
     dim_in = len(bands)
-    model = cnn(dim_in)
-
-    recap_path = os.path.join("models", model_fn, model_fn+"_summary.txt")
-    with open(recap_path, 'w') as recap_file:
-        recap_file.write(summary_training(
-            model, annot_dir, labels_type, weights_loss, learning_rate, epochs, batch_size, other_class, bands=bands))
 
     if not other_class:
         df_full = df_full.loc[df_full['Face'] != 2]
         df_full.index = [i for i in range(len(df_full))]
         df_full.to_csv(os.path.join(model_dir, "full_set.csv"), index=False)
+        n_classes = 2
+        
+    if labels_type == 'Species' :
+        if len(chosen_species)==0:
+            chosen_species = [i for i in range(8)]
+        print("Variétés que l'on va chercher à différencier : " + str(chosen_species)[1:-1])
+        df_full = df_full.loc[df_full['Species'].isin(chosen_species)]
+        if chosen_face == 'Dos' :
+            df_full = df_full.loc[df_full['Face']==0]
+        elif chosen_face == 'Sillon' :
+            df_full = df_full.loc[df_train['Face']==1]
+        n_classes = len(chosen_species)
+    df_full.index = [i for i in range(len(df_full))]
+    
+    model = cnn(dim_in, n_classes)
 
+    recap_path = os.path.join("models", model_fn, model_fn+"_summary.txt")
+    with open(recap_path, 'w', encoding='utf-8') as recap_file:
+        recap_file.write(summary_training(
+            model, annot_dir, labels_type, weights_loss, learning_rate, epochs, batch_size, other_class, bands=bands))
+        
     partition_df = k_folds(df_full, K)
     k = 0
     df_res_trains = pd.DataFrame()
@@ -323,7 +339,7 @@ def cross_validation(annot_dir, cnn, model_fn, labels_type, weights_loss, learni
 
         df_res_trains += df_res_train
         df_res_tests += df_res_test
-        model = cnn(dim_in)
+        model = cnn(dim_in, n_classes)
         k += 1
     df_res_trains /= K
     df_res_tests /= K

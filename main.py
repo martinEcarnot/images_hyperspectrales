@@ -31,8 +31,6 @@ main_loop(annot_dir = annot_dir, cnn = CNN_3, model_fn = model_name, labels_type
 """
 
 
-#def display_save_figure(fig_dir, fig_fn, list_accu_train, list_accu_valid, list_loss_train, list_loss_valid):
-
 
 cnn = CNN_2
 model_fn = "CNN_2_cross_validation"
@@ -103,33 +101,3 @@ main_loop(
     batch_size=48,
     other_class = False)
 
-
-"""
-i=10
-j=0
-weights_loss=[2.,2.]
-learning_rates = [1e-5,5e-4,1e-4,5e-4]
-n_epochs = 80
-for lr in learning_rates:
-    main_loop(
-        annot_dir = annot_dir,
-        cnn = CNN_1,
-        model_fn = model_fn_1+str(i),
-        labels_type = 'Face', 
-        weights_loss = weights_loss,
-        learning_rate = lr,
-        epochs=n_epochs,
-        batch_size=32,
-        other_class = False)
-    i+=1
-    main_loop(
-        annot_dir = annot_dir,
-        cnn = CNN_2,
-        model_fn = model_fn_2+str(j),
-        labels_type = 'Face', 
-        weights_loss = weights_loss,
-        learning_rate = lr,
-        epochs=n_epochs,
-        batch_size=32,
-        other_class = False)
-    j+=1"""

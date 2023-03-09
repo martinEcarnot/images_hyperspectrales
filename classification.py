@@ -408,7 +408,6 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
             bands = [i for i in range(216)]
     dim_in=len(bands)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(torch.cuda.is_available())
     
     df_train = pd.read_csv(annot_dir + 'train_set.csv')
     if not other_class :
@@ -487,7 +486,7 @@ def main_loop(annot_dir, cnn, model_fn, labels_type, weights_loss, learning_rate
     torch.save(model, model_path)
     
     recap_path = os.path.join("models",model_fn,model_fn+"_summary.txt")
-    with open(recap_path,'w') as recap_file:
+    with open(recap_path,'w', encoding='utf-8') as recap_file:
         recap_file.write(summary_training(
             model, annot_dir, labels_type, weights_loss, learning_rate, epochs, batch_size, other_class, bands = bands))
     fig_fn = model_fn+"_training_evolution"

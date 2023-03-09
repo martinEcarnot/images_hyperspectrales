@@ -115,7 +115,6 @@ def crop_all_images(path_img, path_out, path_defauts, bands = [i for i in range(
         os.makedirs(path_out)
     
     df_annotations = pd.read_csv(path_defauts)
-    
     df_annotations.set_index('Image', inplace=True)
     df_annotations.fillna('', inplace=True)
     for file in hdr_files:
